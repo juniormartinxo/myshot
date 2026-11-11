@@ -103,7 +103,8 @@ namespace MyShot {
    try{release=await System.Threading.Tasks.Task.Run(()=>Updates.Latest());}catch(Exception e){error=e.Message;}
    SetUpdateBusy(false,"Atualizar");
    if(error!=null){MessageBox.Show(DialogOwner(),"Não foi possível verificar atualizações. Confira sua conexão e tente novamente.\n\n"+error,"MyShot",MessageBoxButtons.OK,MessageBoxIcon.Warning);return;}
-   if(release==null||!Updates.IsNewer(release.Tag)){MessageBox.Show(DialogOwner(),"Você já está na versão mais recente ("+AppInfo.Version+").","MyShot",MessageBoxButtons.OK,MessageBoxIcon.Information);return;}
+   if(release==null){MessageBox.Show(DialogOwner(),"Ainda não há nenhuma versão publicada para atualizar.","MyShot",MessageBoxButtons.OK,MessageBoxIcon.Information);return;}
+   if(!Updates.IsNewer(release.Tag)){MessageBox.Show(DialogOwner(),"Você já está na versão mais recente ("+AppInfo.Version+").","MyShot",MessageBoxButtons.OK,MessageBoxIcon.Information);return;}
    if(Updates.Find(release,"MyShot.exe")==null||Updates.Find(release,"MyShot.exe.sha256")==null){MessageBox.Show(DialogOwner(),"A versão "+release.Tag+" existe, mas ainda não tem os arquivos de instalação publicados.","MyShot",MessageBoxButtons.OK,MessageBoxIcon.Information);return;}
    if(MessageBox.Show(DialogOwner(),"Nova versão disponível: "+release.Tag+" (atual: "+AppInfo.Version+").\n\nBaixar e reiniciar o MyShot agora?","MyShot",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return;
    SetUpdateBusy(true,"Baixando…");
