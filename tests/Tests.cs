@@ -58,7 +58,7 @@ namespace MyShot {
     var shape=new Mark{Tool=Tool.Rectangle};doc.Add(shape);Check(!doc.EditText(shape,"invalid"),"text editing rejects shapes");doc.Undo();doc.Delete(mark);Check(!doc.CanRedo,"new deletion invalidates redo branch");
    }
    using(var home=new Home())using(var editor=new Editor(source,home)){
-    editor.Show();Application.DoEvents();ToolButton(editor,"Propriedades");var canvas=Find<Canvas>(editor);
+    editor.Show();Application.DoEvents();ToolButton(editor,"Estilo");var canvas=Find<Canvas>(editor);
     var doc=(Document)typeof(Editor).GetField("doc",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(editor);
     ToolButton(editor,"Texto");
     TextModal(()=>Mouse(canvas,"Down",OnCanvas(canvas,new Point(100,100))),dialog=>{Find<TextBox>(dialog).Text="Texto original";Find<Button>(dialog,"Adicionar texto").PerformClick();});
@@ -100,16 +100,15 @@ namespace MyShot {
     ToolButton(editor,"Linha");Mouse(canvas,"Down",OnCanvas(canvas,new Point(80,100)));Mouse(canvas,"Up",OnCanvas(canvas,new Point(280,240)));
     var doc=(Document)typeof(Editor).GetField("doc",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(editor);var mark=doc.Marks[0];var original=mark.A;
     using(var before=doc.Render(null)){
-     Snapshot(editor,output,"editor-panels-collapsed.png");ToolButton(editor,"Ferramentas");Snapshot(editor,output,"editor-panel-left-expanded.png");ToolButton(editor,"Propriedades");Snapshot(editor,output,"editor-panels-expanded.png");
-     ToolButton(editor,"Ferramentas");Snapshot(editor,output,"editor-panel-right-expanded.png");ToolButton(editor,"Propriedades");
-     using(var after=doc.Render(null))Check(Same(before,after)&&mark.A==original,"independent panel toggles preserve annotations and exported pixels");
+     Snapshot(editor,output,"editor-toolbar-only.png");ToolButton(editor,"Estilo");Snapshot(editor,output,"editor-style-popover.png");ToolButton(editor,"Estilo");
+     using(var after=doc.Render(null))Check(Same(before,after)&&mark.A==original,"style popover toggles preserve annotations and exported pixels");
     }
-    ToolButton(editor,"Espessura");Check(Find<NumericUpDown>(editor).Focused,"collapsed property shortcut expands panel and focuses its input");ToolButton(editor,"Propriedades");
+    ToolButton(editor,"Estilo");Check(Find<NumericUpDown>(editor).Visible,"style popover shows numeric inputs for the active tool");
     Key(editor,Keys.V);Point hit=OnCanvas(canvas,new Point(180,170));Mouse(canvas,"Down",hit);Mouse(canvas,"Up",hit);Check(canvas.SelectedBounds.HasValue,"object remains selectable after repeated panel layout changes");
-    ToolButton(editor,"Excluir (Del)");Check(doc.Marks.Count==0,"collapsed property rail deletes the selected object");Key(editor,Keys.Control|Keys.Z);Check(doc.Marks.Count==1,"collapsed-rail deletion can be undone");
+    Find<Button>(editor,"Excluir (Del)").PerformClick();Check(doc.Marks.Count==0,"style popover deletes the selected object");Key(editor,Keys.Control|Keys.Z);Check(doc.Marks.Count==1,"collapsed-rail deletion can be undone");
     ToolButton(editor,"Texto");TextModal(()=>Mouse(canvas,"Down",OnCanvas(canvas,new Point(350,80))),dialog=>{Find<TextBox>(dialog).Text="Texto";Find<Button>(dialog,"Adicionar texto").PerformClick();});Key(editor,Keys.V);
     hit=OnCanvas(canvas,new Point(360,90));Mouse(canvas,"Down",hit);Mouse(canvas,"Up",hit);
-    TextModal(()=>ToolButton(editor,"Editar texto"),dialog=>{Find<TextBox>(dialog).Text="Texto atualizado";Find<Button>(dialog,"Salvar texto").PerformClick();});
+    TextModal(()=>Find<Button>(editor,"Editar texto").PerformClick(),dialog=>{Find<TextBox>(dialog).Text="Texto atualizado";Find<Button>(dialog,"Salvar texto").PerformClick();});
     Check(doc.Marks[1].Text=="Texto atualizado"&&canvas.SelectedBounds.HasValue,"collapsed property rail edits text while preserving selection");Snapshot(editor,output,"editor-panels-text-selected.png");
    }
   }
@@ -158,6 +157,44 @@ namespace MyShot {
     ToolButton(editor,"Mover");Mouse(canvas,"Down",OnCanvas(canvas,new Point(20,20)));Mouse(canvas,"Up",OnCanvas(canvas,new Point(20,20)));Check(doc.Marks.Count==1&&!canvas.SelectedBounds.HasValue,"clicking empty space in move mode adds no annotation");
    }
   }
+  static void UpdateChecks(){
+   Check(Updates.IsNewer("v0.2.0")&&Updates.IsNewer("0.1.1")&&!Updates.IsNewer("v0.1.0")&&!Updates.IsNewer("v0.0.9")&&!Updates.IsNewer("nao-e-versao"),"update compares semantic versions");
+   Check(Updates.IsTrusted("https://github.com/juniormartinxo/myshot/releases/download/v0.2.0/MyShot.exe")&&!Updates.IsTrusted("http://github.com/x")&&!Updates.IsTrusted("https://evil.example/MyShot.exe"),"update accepts only HTTPS GitHub hosts");
+   string sum="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad  MyShot.exe\n";
+   Check(Updates.ExpectedHash(sum,"MyShot.exe")=="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"&&Updates.ExpectedHash(sum,"Other.exe")==null,"checksum file selects the MyShot.exe entry");
+   Check(Updates.HashMatches(System.Text.Encoding.ASCII.GetBytes("abc"),"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")&&!Updates.HashMatches(System.Text.Encoding.ASCII.GetBytes("abd"),"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"),"SHA-256 verification rejects altered bytes");
+  }
+  static void LightSnapshots(string output){
+   Theme.Apply(false);
+   try{
+    using(var home=new Home())using(var fixture=new Bitmap(640,400)){
+     using(var g=Graphics.FromImage(fixture))g.Clear(Color.White);
+     using(var editor=new Editor(fixture,home)){editor.Show();Application.DoEvents();using(var preview=new Bitmap(editor.Width,editor.Height)){editor.DrawToBitmap(preview,new Rectangle(Point.Empty,preview.Size));preview.Save(Path.Combine(output,"editor-light.png"));}}
+     home.ShowBar();Application.DoEvents();
+     using(var preview=new Bitmap(home.Bar.Width,home.Bar.Height)){home.Bar.DrawToBitmap(preview,new Rectangle(Point.Empty,preview.Size));preview.Save(Path.Combine(output,"home-light.png"));}
+    }
+   }finally{Theme.Apply(true);}
+  }
+  // Captura da tela real: mostra a ordem de empilhamento que o usuário vê, o que DrawToBitmap não garante.
+  static void ScreenSnapshot(string output){
+   using(var home=new Home())using(var fixture=new Bitmap(640,400)){
+    using(var g=Graphics.FromImage(fixture))g.Clear(Color.SteelBlue);
+    using(var editor=new Editor(fixture,home)){
+     editor.Show();editor.Activate();Application.DoEvents();
+     ToolButton(editor,"Estilo");Application.DoEvents();System.Threading.Thread.Sleep(400);Application.DoEvents();
+     using(var image=new Bitmap(editor.Width,editor.Height))using(var g=Graphics.FromImage(image)){g.CopyFromScreen(editor.Location,Point.Empty,image.Size);image.Save(Path.Combine(output,"editor-screen-popover.png"));}
+    }
+   }
+  }
+  // Barra de captura na tela real (inclui a alça de arrasto e a ordem de empilhamento de verdade).
+  static void BarScreenSnapshot(string output){
+   using(var home=new Home()){
+    home.ShowBar();Application.DoEvents();System.Threading.Thread.Sleep(400);Application.DoEvents();
+    var bar=home.Bar;
+    using(var image=new Bitmap(bar.Width,bar.Height))using(var g=Graphics.FromImage(image)){g.CopyFromScreen(bar.Location,Point.Empty,image.Size);image.Save(Path.Combine(output,"bar-screen.png"));}
+    bar.Hide();
+   }
+  }
   [STAThread] static int Main(string[] args){
    string output=args.Length>0?args[0]:Path.GetFullPath("research/private/validation");Directory.CreateDirectory(output);
    try{
@@ -203,7 +240,7 @@ namespace MyShot {
      using(var isolated=Microsoft.Win32.Registry.CurrentUser.OpenSubKey(isolatedRegistryPath))Check((string)isolated.GetValue("OtherApp")=="preserve-me","startup changes preserve other registry values");
     }catch(System.Security.SecurityException e){Console.WriteLine("BLOCKED isolated registry test: "+e.Message);}catch(UnauthorizedAccessException e){Console.WriteLine("BLOCKED isolated registry test: "+e.Message);}
     finally{if(registryCreated)Microsoft.Win32.Registry.CurrentUser.DeleteSubKeyTree(isolatedRegistryPath,false);}
-    using(var startupHome=new Home(true)){startupHome.Show();Application.DoEvents();Check(!startupHome.Visible&&startupHome.IsHandleCreated,"startup creates hotkey window without showing Home");startupHome.Show();Application.DoEvents();Check(startupHome.Visible,"startup Home can be restored from tray");}
+    using(var startupHome=new Home(true)){Application.DoEvents();Check(!startupHome.BarVisible&&startupHome.IsHandleCreated,"startup keeps only tray and hotkeys");startupHome.ShowBar();Application.DoEvents();Check(startupHome.BarVisible,"capture bar opens from tray after startup");}
     using(var first=new Form())using(var second=new Form()){
      bool acquired=Native.RegisterHotKey(first.Handle,91,0x4006,0x4a);
      if(acquired){try{bool duplicate=Native.RegisterHotKey(second.Handle,92,0x4006,0x4a);Check(!duplicate,"Win32 rejects conflicting hotkey");if(duplicate)Native.UnregisterHotKey(second.Handle,92);}finally{Native.UnregisterHotKey(first.Handle,91);}bool again=Native.RegisterHotKey(second.Handle,92,0x4006,0x4a);Check(again,"Win32 hotkey can be registered after release");Native.UnregisterHotKey(second.Handle,92);}
@@ -211,7 +248,7 @@ namespace MyShot {
     }
     foreach(var screen in Screen.AllScreens)Console.WriteLine("MONITOR "+screen.DeviceName+" "+screen.Bounds);
     using(var home=new Home())using(var fixture=new Bitmap(640,400))using(var g=Graphics.FromImage(fixture)) {
-     home.Show();Application.DoEvents();
+     home.ShowBar();Application.DoEvents();
      g.Clear(Color.White);using(var font=new Font("Segoe UI",28))g.DrawString("MyShot — teste de edição",font,Brushes.Black,20,70);
      using(var editor=new Editor(fixture,home))using(var preview=new Bitmap(editor.Width,editor.Height)){
       editor.Show();Application.DoEvents();editor.DrawToBitmap(preview,new Rectangle(Point.Empty,preview.Size));preview.Save(Path.Combine(output,"editor-window.png"));
@@ -219,12 +256,16 @@ namespace MyShot {
       foreach(Control control in editor.Controls){var strip=control as ToolStrip;if(strip!=null)foreach(ToolStripItem item in strip.Items){var button=item as ToolStripButton;if(button!=null&&button.Text=="Texto")button.PerformClick();}}
       Application.DoEvents();using(var textTool=new Bitmap(editor.Width,editor.Height)){editor.DrawToBitmap(textTool,new Rectangle(Point.Empty,textTool.Size));textTool.Save(Path.Combine(output,"editor-text.png"));}
      }
-     using(var preview=new Bitmap(home.Width,home.Height)){home.DrawToBitmap(preview,new Rectangle(Point.Empty,preview.Size));preview.Save(Path.Combine(output,"home-window.png"));}
+     using(var preview=new Bitmap(home.Bar.Width,home.Bar.Height)){home.Bar.DrawToBitmap(preview,new Rectangle(Point.Empty,preview.Size));preview.Save(Path.Combine(output,"home-window.png"));}
      using(var settings=new SettingsDialog(home.Prefs))using(var preview=new Bitmap(settings.Width,settings.Height)){settings.Show();Application.DoEvents();settings.DrawToBitmap(preview,new Rectangle(Point.Empty,preview.Size));preview.Save(Path.Combine(output,"settings-window.png"));}
      using(var text=new TextDialog())using(var preview=new Bitmap(text.Width,text.Height)){text.Show();Application.DoEvents();text.DrawToBitmap(preview,new Rectangle(Point.Empty,preview.Size));preview.Save(Path.Combine(output,"text-window.png"));}
      Console.WriteLine("OBSERVED home/editor/settings DrawToBitmap completed; inspect PNGs for layout.");
     }
     try{using(var desktop=DesktopCapture.Take(SystemInformation.VirtualScreen)){desktop.Save(Path.Combine(output,"desktop.png"));Console.WriteLine("PASS desktop acquisition (not interactive workflow)");}}catch(Exception e){Console.WriteLine("BLOCKED desktop acquisition: "+e.GetType().Name+": "+e.Message);}
+    UpdateChecks();
+    LightSnapshots(output);
+    ScreenSnapshot(output);
+    BarScreenSnapshot(output);
     Console.WriteLine("RESULT "+count+" assertions passed; interactive workflow is a separate required check.");return 0;
    }catch(Exception e){Console.Error.WriteLine(e);return 1;}
   }

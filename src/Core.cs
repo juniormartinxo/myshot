@@ -21,6 +21,8 @@ namespace MyShot {
   [DataMember] public string Folder = Environment.GetFolderPath(Environment.SpecialFolder.MyPictures);
   [DataMember] public string Format = "png";
   [DataMember] public bool Sound;
+  // "dark" (padrão) ou "light". Aplicado na próxima abertura do app.
+  [DataMember] public string Appearance = "dark";
   [DataMember] public int CaptureKey = (int)Keys.S;
   [DataMember] public int FileKey = (int)Keys.F;
   [DataMember] public bool ShiftInsteadOfAlt;
