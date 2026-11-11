@@ -7,7 +7,7 @@ namespace MyShot {
  // Barra pequena no topo da tela, no estilo da barra de captura do Windows. É a única interface que o app mostra ao abrir.
  internal sealed class CaptureBar : Form {
   readonly Home home;
-  readonly ToolStrip strip=new ToolStrip{GripStyle=ToolStripGripStyle.Hidden,Dock=DockStyle.Fill,BackColor=Theme.Surface,Renderer=new ShotStripRenderer(),ImageScalingSize=new Size(Theme.IconSize,Theme.IconSize),Padding=new Padding(6,4,6,12)};
+  readonly ToolStrip strip=new ToolStrip{GripStyle=ToolStripGripStyle.Hidden,Dock=DockStyle.Fill,BackColor=Theme.Surface,Renderer=new ShotStripRenderer(),ImageScalingSize=new Size(Theme.BarIconSize,Theme.BarIconSize),Padding=new Padding(6,4,6,12)};
   readonly DragGrip grip;
   readonly ToolStripButton region,desktop,direct;
 
@@ -24,7 +24,7 @@ namespace MyShot {
    var more=Add("Mais opções",()=>home.ShowMoreMenu());more.Image=Theme.Icon("more",Theme.Ink);
    var close=Add("Fechar barra (o MyShot continua na bandeja)",()=>Hide());close.Image=Theme.Icon("close",Theme.Ink);
    // Alça de arrasto embaixo da barra; o fundo dos botões também arrasta, sem cursor de movimento sobre a barra inteira.
-   grip=new DragGrip(StartDrag){Dock=DockStyle.Bottom,Height=Dip(12)};
+   grip=new DragGrip(StartDrag){Dock=DockStyle.Bottom,Height=Dip(24)};
    Controls.Add(grip);Controls.Add(strip);
    var content=strip.GetPreferredSize(Size.Empty);
    ClientSize=new Size(content.Width,content.Height+grip.Height);
@@ -48,7 +48,7 @@ namespace MyShot {
 
   ToolStripButton Add(string text,Action action){
    // Botão quadrado: lado = ícone + margem interna dos dois lados; o ícone fica centralizado.
-   int pad=Dip(5),side=Theme.IconSize+2*pad;
+   int pad=Dip(8),side=Theme.BarIconSize+2*pad;
    var b=new ToolStripButton{DisplayStyle=ToolStripItemDisplayStyle.Image,AutoSize=false,Size=new Size(side,side),Padding=new Padding(pad),ImageAlign=ContentAlignment.MiddleCenter,Margin=new Padding(2,0,2,0),AccessibleName=text,ToolTipText=text};
    b.Click+=(s,e)=>action();strip.Items.Add(b);return b;
   }

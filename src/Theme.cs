@@ -39,6 +39,8 @@ namespace MyShot {
   // Escala de DPI da tela (96 = 100%). Definida em Main antes de qualquer janela.
   internal static float Scale=1f;
   internal static int IconSize{get{return Math.Max(24,(int)Math.Round(24*Scale));}}
+  // Ícones da barra de captura: 16 px em 100% de escala, sem alterar o tamanho usado no editor.
+  internal static int BarIconSize{get{return Math.Max(16,(int)Math.Round(16*Scale));}}
 
   // Ícones são desenhados como vetor diretamente no destino, em qualquer escala de DPI, em vez de um bitmap redimensionado (que fica borrado).
   // Icon() devolve um bitmap só como marcador de tamanho para a ToolStrip; o renderizador troca por DrawIcon na hora de pintar.

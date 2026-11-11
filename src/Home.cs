@@ -14,6 +14,7 @@ namespace MyShot {
   readonly ContextMenuStrip moreMenu=new ContextMenuStrip();
   readonly ToolStripMenuItem updateItem;
   bool capturing;
+  static string lastConflict;
   readonly List<Editor> editors=new List<Editor>();
 
   internal Home(bool startInTray=false) {
@@ -50,7 +51,10 @@ namespace MyShot {
    string prefix=Prefs.ShiftInsteadOfAlt?"Ctrl+Shift+":"Ctrl+Alt+";
    string capture=prefix+(Keys)Prefs.CaptureKey,save=prefix+(Keys)Prefs.FileKey;
    bar.SetShortcuts(capture,save,a,b);
-   if(!a||!b)tray.ShowBalloonTip(4000,"MyShot","Atalho em uso: "+(!a?capture+" ":"")+(!b?save:"")+". Altere em Preferências.",ToolTipIcon.Warning);
+   // Balão só quando o conflito muda; a dica da barra continua sempre mostrando o estado.
+   string conflict=(!a?capture+" ":"")+(!b?save:"");
+   if(conflict.Length==0)lastConflict=null;
+   else if(conflict!=lastConflict){lastConflict=conflict;tray.ShowBalloonTip(4000,"MyShot","Atalho em uso: "+conflict.Trim()+". Altere em Preferências.",ToolTipIcon.Warning);}
   }
 
   protected override void WndProc(ref Message m){if(m.Msg==0x0312){BeginCapture(m.WParam.ToInt32()==2,m.WParam.ToInt32()==2);return;}base.WndProc(ref m);}
