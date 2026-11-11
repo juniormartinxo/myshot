@@ -25,7 +25,12 @@ namespace MyShot {
   [DataMember] public string Appearance = "dark";
   [DataMember] public int CaptureKey = (int)Keys.S;
   [DataMember] public int FileKey = (int)Keys.F;
-  [DataMember] public bool ShiftInsteadOfAlt;
+  [DataMember] public bool ShiftInsteadOfAlt {get;set;}
+  // Modificadores do atalho em bits (Alt=1, Ctrl=2, Shift=4, Win=8). Zero = arquivo antigo: usa ShiftInsteadOfAlt.
+  [DataMember] public int Modifiers;
+  internal const int ModAlt=1,ModCtrl=2,ModShift=4,ModWin=8;
+  internal int HotkeyModifiers{get{if(Modifiers!=0)return Modifiers;return ShiftInsteadOfAlt?(ModCtrl|ModShift):(ModCtrl|ModAlt);}}
+  internal static string ModifierText(int mask){var parts=new System.Collections.Generic.List<string>();if((mask&ModCtrl)!=0)parts.Add("Ctrl");if((mask&ModAlt)!=0)parts.Add("Alt");if((mask&ModShift)!=0)parts.Add("Shift");if((mask&ModWin)!=0)parts.Add("Win");return String.Join("+",parts);}
   [DataMember] public int Color = System.Drawing.Color.FromArgb(239,68,68).ToArgb();
   [DataMember] public int Thickness = 4;
   [DataMember] public int Opacity = 100;

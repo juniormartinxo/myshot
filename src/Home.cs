@@ -47,10 +47,10 @@ namespace MyShot {
 
   internal void RegisterKeys() {
    Native.UnregisterHotKey(Handle,1);Native.UnregisterHotKey(Handle,2);
-   uint mods=0x4000u|2u|(Prefs.ShiftInsteadOfAlt?4u:1u);
+   uint mods=0x4000u|(uint)Prefs.HotkeyModifiers;
    bool a=Native.RegisterHotKey(Handle,1,mods,(uint)Prefs.CaptureKey);
    bool b=Native.RegisterHotKey(Handle,2,mods,(uint)Prefs.FileKey);
-   string prefix=Prefs.ShiftInsteadOfAlt?"Ctrl+Shift+":"Ctrl+Alt+";
+   string prefix=Preferences.ModifierText(Prefs.HotkeyModifiers)+"+";
    string capture=prefix+(Keys)Prefs.CaptureKey,save=prefix+(Keys)Prefs.FileKey;
    bar.SetShortcuts(capture,save,a,b);
    // Balão só quando o conflito muda; a dica da barra continua sempre mostrando o estado.

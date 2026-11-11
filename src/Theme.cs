@@ -103,6 +103,8 @@ namespace MyShot {
   }
   protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e){e.Graphics.Clear(Theme.Surface);}
   protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e){}
+  // Item de lista suspensa: destaque com a cor do tema, sem o azul padrão do Windows.
+  protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e){using(var b=new SolidBrush(e.Item.Selected?Theme.Raised:Theme.Surface))e.Graphics.FillRectangle(b,new Rectangle(Point.Empty,e.Item.Size));}
   protected override void OnRenderButtonBackground(ToolStripItemRenderEventArgs e){
    var button=e.Item as ToolStripButton;bool selected=button!=null&&button.Checked;bool primary=Equals(e.Item.Tag,"primary");
    var r=new RectangleF(2,2,e.Item.Width-4,e.Item.Height-4);e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;

@@ -290,6 +290,7 @@ namespace MyShot {
     }
     var p=new Preferences{Folder=output,Format="bmp",ShiftInsteadOfAlt=true,Color=Color.Blue.ToArgb(),FontSize=31,Filled=true,Opacity=60,Thickness=7};string prefPath=Path.Combine(output,"preferences-test.json");p.Save(prefPath);p.Format="jpg";p.Save(prefPath);string warning;var loaded=Preferences.Load(prefPath,out warning);
     Check(warning==null&&loaded.Format=="jpg"&&loaded.ShiftInsteadOfAlt&&loaded.Thickness==7&&loaded.Filled&&loaded.Opacity==60&&loaded.FontSize==31,"preferences persist and atomically replace");
+    Check(Preferences.ModifierText(Preferences.ModCtrl|Preferences.ModWin)=="Ctrl+Win"&&new Preferences{Modifiers=Preferences.ModAlt|Preferences.ModShift}.HotkeyModifiers==(Preferences.ModAlt|Preferences.ModShift)&&new Preferences().HotkeyModifiers==(Preferences.ModCtrl|Preferences.ModAlt),"hotkey modifiers accept any combination and keep the old default");
     File.WriteAllText(prefPath,"corrupt");loaded=Preferences.Load(prefPath,out warning);Check(warning!=null&&loaded.Format=="png","corrupt preferences fall back with warning");
     Check(WindowsStartup.Command(@"C:\Pasta com espaço\ação\MyShot.exe")=="\"C:\\Pasta com espaço\\ação\\MyShot.exe\" --startup","startup command quotes spaces and Unicode correctly");
     string isolatedRegistryPath=@"Software\MyShotTests\"+Guid.NewGuid().ToString("N");bool registryCreated=false;
