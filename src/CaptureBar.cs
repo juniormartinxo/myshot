@@ -7,7 +7,7 @@ namespace MyShot {
  // Barra pequena no topo da tela, no estilo da barra de captura do Windows. É a única interface que o app mostra ao abrir.
  internal sealed class CaptureBar : Form {
   readonly Home home;
-  readonly ToolStrip strip=new ToolStrip{GripStyle=ToolStripGripStyle.Hidden,Dock=DockStyle.Fill,BackColor=Theme.Surface,Renderer=new ShotStripRenderer(),ImageScalingSize=new Size(Theme.BarIconSize,Theme.BarIconSize),Padding=new Padding(6,4,6,12)};
+  readonly ToolStrip strip=new ToolStrip{GripStyle=ToolStripGripStyle.Hidden,Dock=DockStyle.Fill,BackColor=Theme.Surface,Renderer=new ShotStripRenderer(),ImageScalingSize=new Size(Theme.BarIconSize,Theme.BarIconSize),Padding=new Padding(24,4,24,12)};
   readonly DragGrip grip;
   readonly ToolStripButton region,desktop,direct;
 
@@ -46,6 +46,11 @@ namespace MyShot {
   // Move a janela como se o usuário tivesse pego a barra de título.
   void StartDrag(){ReleaseCapture();SendMessage(Handle,WmNcLButtonDown,(IntPtr)HtCaption,IntPtr.Zero);}
 
+  // Sombra do Windows (CS_DROPSHADOW) para a janela sem borda; a barra fica flutuando com uma sombra suave.
+  protected override CreateParams CreateParams{get{var cp=base.CreateParams;cp.ClassStyle|=0x00020000;return cp;}}
+  // Cantos suaves pelo DWM (Windows 11): região recortada não tem antialias e serrilha a borda.
+  [System.Runtime.InteropServices.DllImport("dwmapi.dll")] static extern int DwmSetWindowAttribute(IntPtr hwnd,int attribute,ref int value,int size);
+  protected override void OnHandleCreated(EventArgs e){base.OnHandleCreated(e);int corner=2;try{DwmSetWindowAttribute(Handle,33,ref corner,4);}catch(Exception){}}
   int Dip(int value){return (int)Math.Round(value*DeviceDpi/96f);}
 
   ToolStripButton Add(string text,Action action){
