@@ -228,6 +228,18 @@ namespace MyShot {
     Check(doc.Marks.Count==2&&doc.Marks[1].Points[0]==doc.Marks[0].Points[1],"next face snaps its vertex to an existing face vertex");
    }
   }
+  // Etapa: cor do fundo e cor da fonte são independentes; a fonte é usada pelas etapas novas.
+  static void StepTextChecks(){
+   using(var home=new Home())using(var fixture=new Bitmap(300,200))using(var editor=new Editor(fixture,home)){
+    editor.Show();Application.DoEvents();
+    home.Prefs.StepTextColor=Color.Yellow.ToArgb();
+    ToolButton(editor,"Etapa");var canvas=Find<Canvas>(editor);
+    var doc=(Document)typeof(Editor).GetField("doc",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(editor);
+    Check(Find<ActionButton>(editor,"Cor da fonte").Visible,"step shows a font color option");
+    Mouse(canvas,"Down",OnCanvas(canvas,new Point(50,50)));
+    Check(doc.Marks.Count==1&&doc.Marks[0].Tool==Tool.Step&&doc.Marks[0].TextColor.ToArgb()==Color.Yellow.ToArgb(),"new step uses the chosen font color");
+   }
+  }
   [STAThread] static int Main(string[] args){
    string output=args.Length>0?args[0]:Path.GetFullPath("research/private/validation");Directory.CreateDirectory(output);
    Home.Quiet=true;
@@ -301,6 +313,7 @@ namespace MyShot {
     BarScreenSnapshot(output);
     PolygonChecks();
     FaceChecks();
+    StepTextChecks();
     Console.WriteLine("RESULT "+count+" assertions passed; interactive workflow is a separate required check.");return 0;
    }catch(Exception e){Console.Error.WriteLine(e);return 1;}
   }

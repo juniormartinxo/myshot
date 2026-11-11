@@ -11,7 +11,7 @@ namespace MyShot {
   readonly ToolStrip toolbar=new ToolStrip{GripStyle=ToolStripGripStyle.Hidden,Dock=DockStyle.None,AutoSize=true,BackColor=Theme.Surface,Renderer=new ShotStripRenderer(),ImageScalingSize=new Size(Theme.BarIconSize,Theme.BarIconSize),Padding=new Padding(6),Font=new Font("Segoe UI",9)};
   readonly FlowLayoutPanel optionsRow=new FlowLayoutPanel{Dock=DockStyle.None,AutoSize=false,WrapContents=false,BackColor=Theme.Surface,Padding=new Padding(12,8,12,8)};
   readonly ToolStripButton undo,redo,moveButton;
-  readonly ActionButton colorButton;
+  readonly ActionButton colorButton,stepTextButton;
   readonly NumericUpDown widthInput,opacityInput,fontInput;
   readonly CheckBox fillInput;
   readonly Button fontButton,editTextButton,deleteButton;
@@ -38,6 +38,8 @@ namespace MyShot {
 
    colorButton=(ActionButton)UI.Button("Cor",()=>{using(var dialog=new ColorDialog{Color=Color.FromArgb(home.Prefs.Color),FullOpen=true})if(dialog.ShowDialog(this)==DialogResult.OK){home.Prefs.Color=dialog.Color.ToArgb();colorButton.Swatch=dialog.Color;colorButton.Invalidate();Store();}},false);
    colorButton.Swatch=Color.FromArgb(home.Prefs.Color);colorButton.Margin=new Padding(0,0,14,0);optionsRow.Controls.Add(colorButton);
+   stepTextButton=(ActionButton)UI.Button("Cor da fonte",()=>{using(var dialog=new ColorDialog{Color=Color.FromArgb(home.Prefs.StepTextColor),FullOpen=true})if(dialog.ShowDialog(this)==DialogResult.OK){home.Prefs.StepTextColor=dialog.Color.ToArgb();stepTextButton.Swatch=dialog.Color;stepTextButton.Invalidate();Store();}},false);
+   stepTextButton.Swatch=Color.FromArgb(home.Prefs.StepTextColor);stepTextButton.Margin=new Padding(0,0,14,0);optionsRow.Controls.Add(stepTextButton);
    widthInput=AddNumber("Espessura (px)",1,40,home.Prefs.Thickness,v=>home.Prefs.Thickness=v);
    opacityInput=AddNumber("Opacidade (%)",5,100,home.Prefs.Opacity,v=>home.Prefs.Opacity=v);
    fillInput=new CheckBox{Text="Preencher",AutoSize=true,Checked=home.Prefs.Filled,Margin=new Padding(0,8,14,0)};fillInput.CheckedChanged+=(s,e)=>{home.Prefs.Filled=fillInput.Checked;Store();};optionsRow.Controls.Add(fillInput);
@@ -83,6 +85,7 @@ namespace MyShot {
    fillInput.Visible=!moveMode&&(selectedTool==Tool.Rectangle||selectedTool==Tool.Ellipse||selectedTool==Tool.Polygon||selectedTool==Tool.Face);
    PropertyVisible(fontInput,!moveMode&&text);fontButton.Visible=!moveMode&&text;
    PropertyVisible(widthInput,!moveMode&&!text);PropertyVisible(opacityInput,!moveMode&&selectedTool!=Tool.Mosaic);PropertyVisible(colorButton,!moveMode&&selectedTool!=Tool.Mosaic);
+   PropertyVisible(stepTextButton,!moveMode&&selectedTool==Tool.Step);colorButton.Text=selectedTool==Tool.Step?"Cor do fundo":"Cor";
    ((Label)widthInput.Tag).Text=selectedTool==Tool.Mosaic?"Tamanho do desfoque":"Espessura (px)";
    editTextButton.Visible=moveMode&&selectedMark!=null&&selectedMark.Tool==Tool.Text;deleteButton.Visible=moveMode&&selectedMark!=null;
    LayoutChrome();
@@ -97,7 +100,7 @@ namespace MyShot {
    var p=Geometry.ImagePoint(e.Location,canvas.View,doc.Original.Size);var pref=home.Prefs;
    canvas.Focus();
    if(moveMode){selectedMark=doc.HitTest(p,HitTolerance());movePreview=null;moving=selectedMark!=null;moveStart=p;UpdateInspector();if(moving){canvas.Capture=true;canvas.Cursor=Cursors.SizeAll;}RefreshImage();return;}
-   var mark=new Mark{Tool=selectedTool,A=p,B=p,Color=Color.FromArgb((int)(255*pref.Opacity/100.0),Color.FromArgb(pref.Color)),Width=pref.Thickness,Filled=pref.Filled,FontSize=pref.FontSize,FontFamily=pref.FontFamily,Number=doc.NextStep};
+   var mark=new Mark{Tool=selectedTool,A=p,B=p,Color=Color.FromArgb((int)(255*pref.Opacity/100.0),Color.FromArgb(pref.Color)),TextColor=Color.FromArgb(pref.StepTextColor),Width=pref.Thickness,Filled=pref.Filled,FontSize=pref.FontSize,FontFamily=pref.FontFamily,Number=doc.NextStep};
    if(selectedTool==Tool.Text){StartTextEdit(mark,true);return;}
    if(selectedTool==Tool.Step){doc.Add(mark);Changed();return;}
    mark.Points.Add(p);pending=mark;canvas.Capture=true;
