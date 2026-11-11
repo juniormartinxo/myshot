@@ -12,7 +12,8 @@ namespace MyShot {
   readonly FlowLayoutPanel optionsRow=new FlowLayoutPanel{Dock=DockStyle.None,AutoSize=false,WrapContents=false,BackColor=Theme.Surface,Padding=new Padding(12,8,12,8)};
   readonly ToolStripButton undo,redo,moveButton;
   readonly ActionButton colorButton,stepTextButton;
-  readonly NumericUpDown widthInput,opacityInput,fontInput;
+  readonly Label colorLabel=Theme.Label("Cor:",9,true),stepTextLabel=Theme.Label("Fonte:",9,true);
+  readonly NumberField widthInput,opacityInput,fontInput;
   readonly CheckBox fillInput;
   readonly Button fontButton,editTextButton,deleteButton;
   static readonly string[] ToolNames={"Linha","Retângulo","Elipse","Seta","Desenho","Texto","Desfoque","Etapa","Polígono","Face"};
@@ -36,10 +37,10 @@ namespace MyShot {
    toolbar.Items.Add(new ToolStripSeparator());
    var close=Add("Fechar",()=>Close());close.Image=Theme.Icon("close",Theme.Ink);close.ToolTipText="Fechar editor (Esc)";
 
-   colorButton=(ActionButton)UI.Button("Cor",()=>{using(var dialog=new ColorDialog{Color=Color.FromArgb(home.Prefs.Color),FullOpen=true})if(dialog.ShowDialog(this)==DialogResult.OK){home.Prefs.Color=dialog.Color.ToArgb();colorButton.Swatch=dialog.Color;colorButton.Invalidate();Store();}},false);
-   colorButton.Swatch=Color.FromArgb(home.Prefs.Color);colorButton.Margin=new Padding(0,0,14,0);optionsRow.Controls.Add(colorButton);
-   stepTextButton=(ActionButton)UI.Button("Cor da fonte",()=>{using(var dialog=new ColorDialog{Color=Color.FromArgb(home.Prefs.StepTextColor),FullOpen=true})if(dialog.ShowDialog(this)==DialogResult.OK){home.Prefs.StepTextColor=dialog.Color.ToArgb();stepTextButton.Swatch=dialog.Color;stepTextButton.Invalidate();Store();}},false);
-   stepTextButton.Swatch=Color.FromArgb(home.Prefs.StepTextColor);stepTextButton.Margin=new Padding(0,0,14,0);optionsRow.Controls.Add(stepTextButton);
+   colorButton=(ActionButton)UI.Button("",()=>{using(var dialog=new ColorDialog{Color=Color.FromArgb(home.Prefs.Color),FullOpen=true})if(dialog.ShowDialog(this)==DialogResult.OK){home.Prefs.Color=dialog.Color.ToArgb();colorButton.Swatch=dialog.Color;colorButton.Invalidate();Store();}},false);
+   colorButton.AccessibleName="Cor";ColorSwatchButton(colorButton,colorLabel);colorButton.Swatch=Color.FromArgb(home.Prefs.Color);optionsRow.Controls.Add(ColorPair(colorLabel,colorButton));
+   stepTextButton=(ActionButton)UI.Button("",()=>{using(var dialog=new ColorDialog{Color=Color.FromArgb(home.Prefs.StepTextColor),FullOpen=true})if(dialog.ShowDialog(this)==DialogResult.OK){home.Prefs.StepTextColor=dialog.Color.ToArgb();stepTextButton.Swatch=dialog.Color;stepTextButton.Invalidate();Store();}},false);
+   stepTextButton.AccessibleName="Cor da fonte";ColorSwatchButton(stepTextButton,stepTextLabel);stepTextButton.Swatch=Color.FromArgb(home.Prefs.StepTextColor);optionsRow.Controls.Add(ColorPair(stepTextLabel,stepTextButton));
    widthInput=AddNumber("Espessura (px)",1,40,home.Prefs.Thickness,v=>home.Prefs.Thickness=v);
    opacityInput=AddNumber("Opacidade (%)",5,100,home.Prefs.Opacity,v=>home.Prefs.Opacity=v);
    fillInput=new CheckBox{Text="Preencher",AutoSize=true,Checked=home.Prefs.Filled,Margin=new Padding(0,8,14,0)};fillInput.CheckedChanged+=(s,e)=>{home.Prefs.Filled=fillInput.Checked;Store();};optionsRow.Controls.Add(fillInput);
@@ -70,12 +71,24 @@ namespace MyShot {
   }
   ToolStripButton Add(string text,Action action){int pad=Dip(7),side=Theme.BarIconSize+2*pad;var b=new ToolStripButton(text){DisplayStyle=ToolStripItemDisplayStyle.Image,AutoSize=false,Size=new Size(side,side),Padding=new Padding(pad),ImageAlign=ContentAlignment.MiddleCenter,Margin=new Padding(1,0,1,0),AccessibleName=text,ToolTipText=text};b.Click+=(s,e)=>action();toolbar.Items.Add(b);return b;}
   // Rótulo e campo numérico lado a lado na linha de opções; o rótulo some junto com o campo.
-  NumericUpDown AddNumber(string text,int min,int max,int value,Action<int> set){
+  NumberField AddNumber(string text,int min,int max,int value,Action<int> set){
    var label=Theme.Label(text,9,true);label.Margin=new Padding(0,10,6,0);optionsRow.Controls.Add(label);
-   var n=new NumericUpDown{Minimum=min,Maximum=max,Value=value,Width=64,Margin=new Padding(0,6,16,0),BorderStyle=BorderStyle.FixedSingle,BackColor=Theme.Surface,ForeColor=Theme.Ink,AccessibleName=text,Tag=label};
+   var n=new NumberField{Minimum=min,Maximum=max,Value=value,Width=64,Margin=new Padding(0,6,16,0),AccessibleName=text,Tag=label};
    n.ValueChanged+=(s,e)=>{set((int)n.Value);Store();};optionsRow.Controls.Add(n);return n;
   }
   void Store(){try{home.Persist();}catch(Exception e){info.Text="Preferências não salvas: "+e.Message;}}
+  // Rótulo e seletor de cor sempre juntos, na ordem rótulo → bolinha, dentro de um grupo próprio da linha de opções.
+  static FlowLayoutPanel ColorPair(Label label,ActionButton button){
+   var pair=new FlowLayoutPanel{AutoSize=true,WrapContents=false,Margin=Padding.Empty,BackColor=Theme.Surface,Dock=DockStyle.None};
+   pair.Controls.Add(label);pair.Controls.Add(button);
+   pair.Tag=button;
+   return pair;
+  }
+  // Botão só com a bolinha da cor (sem texto); o rótulo "Fundo:"/"Fonte:"/"Cor:" fica num controle à esquerda.
+  static void ColorSwatchButton(ActionButton button,Label label){
+   button.AutoSize=false;button.MinimumSize=new Size(40,34);button.Size=new Size(40,34);button.Margin=new Padding(0,4,14,0);button.Tag=label;
+   label.Margin=new Padding(0,10,6,0);
+  }
   void SelectTool(Tool tool){CancelInteraction();moveMode=false;selectedMark=null;selectedTool=tool;UpdateInspector();canvas.Cursor=Cursors.Cross;RefreshImage();}
   void SelectMove(){CancelInteraction();moveMode=true;UpdateInspector();canvas.Cursor=Cursors.Default;canvas.Focus();RefreshImage();}
   // Mostra na linha de opções só o que a ferramenta ativa (ou o objeto selecionado, no modo Mover) usa.
@@ -85,7 +98,7 @@ namespace MyShot {
    fillInput.Visible=!moveMode&&(selectedTool==Tool.Rectangle||selectedTool==Tool.Ellipse||selectedTool==Tool.Polygon||selectedTool==Tool.Face);
    PropertyVisible(fontInput,!moveMode&&text);fontButton.Visible=!moveMode&&text;
    PropertyVisible(widthInput,!moveMode&&!text);PropertyVisible(opacityInput,!moveMode&&selectedTool!=Tool.Mosaic);PropertyVisible(colorButton,!moveMode&&selectedTool!=Tool.Mosaic);
-   PropertyVisible(stepTextButton,!moveMode&&selectedTool==Tool.Step);colorButton.Text=selectedTool==Tool.Step?"Cor do fundo":"Cor";
+   PropertyVisible(stepTextButton,!moveMode&&selectedTool==Tool.Step);colorLabel.Text=selectedTool==Tool.Step?"Fundo:":selectedTool==Tool.Text?"Fonte:":"Cor:";
    ((Label)widthInput.Tag).Text=selectedTool==Tool.Mosaic?"Tamanho do desfoque":"Espessura (px)";
    editTextButton.Visible=moveMode&&selectedMark!=null&&selectedMark.Tool==Tool.Text;deleteButton.Visible=moveMode&&selectedMark!=null;
    LayoutChrome();

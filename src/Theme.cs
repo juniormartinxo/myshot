@@ -83,8 +83,9 @@ namespace MyShot {
    Color fg=Primary?Theme.OnAccent:Theme.Ink;if(!Enabled){bg=Theme.Background;fg=Theme.Muted;}
    using(var shape=Theme.Round(new RectangleF(.5f,.5f,Width-1,Height-1),5*scale))using(var brush=new SolidBrush(bg))using(var border=new Pen(Primary?bg:Theme.Border)) {g.FillPath(brush,shape);if(!Primary)g.DrawPath(border,shape);}
    var text=ClientRectangle;TextFormatFlags flags=TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis;
-   if(Swatch.HasValue){int side=(int)(24*scale),left=(int)(16*scale);using(var b=new SolidBrush(Swatch.Value))g.FillEllipse(b,left,(Height-side)/2,side,side);using(var p=new Pen(Theme.Border))g.DrawEllipse(p,left,(Height-side)/2,side,side);text.X=(int)(52*scale);text.Width-=text.X+(int)(12*scale);flags=TextFormatFlags.Left|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis;}
-   TextRenderer.DrawText(g,Text,Font,text,fg,flags);
+   if(Swatch.HasValue&&Text.Length==0){int side=(int)(20*scale),x=(Width-side)/2,y=(Height-side)/2;using(var b=new SolidBrush(Swatch.Value))g.FillEllipse(b,x,y,side,side);using(var p=new Pen(Theme.Border))g.DrawEllipse(p,x,y,side,side);}
+   else if(Swatch.HasValue){int side=(int)(24*scale),left=(int)(16*scale);using(var b=new SolidBrush(Swatch.Value))g.FillEllipse(b,left,(Height-side)/2,side,side);using(var p=new Pen(Theme.Border))g.DrawEllipse(p,left,(Height-side)/2,side,side);text.X=(int)(52*scale);text.Width-=text.X+(int)(12*scale);flags=TextFormatFlags.Left|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis;}
+   if(Text.Length>0)TextRenderer.DrawText(g,Text,Font,text,fg,flags);
    if(Focused){var r=Rectangle.Inflate(ClientRectangle,-(int)(5*scale),-(int)(5*scale));ControlPaint.DrawFocusRectangle(g,r,fg,bg);}
   }
  }

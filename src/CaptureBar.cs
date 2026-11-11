@@ -14,6 +14,8 @@ namespace MyShot {
   internal CaptureBar(Home owner){
    home=owner;UI.Style(this);
    FormBorderStyle=FormBorderStyle.None;ShowInTaskbar=false;StartPosition=FormStartPosition.Manual;KeyPreview=true;BackColor=Theme.Surface;
+   // Sempre na frente das outras aplicações; só some ao fechar ou ir para a bandeja (e durante a captura).
+   TopMost=true;
    // Vidro escuro: a janela inteira fica semitransparente, sem cantos arredondados.
    Opacity=0.86;
    region=Add("Capturar região",()=>home.BeginCapture(false,false));region.Tag="primary";region.Image=Theme.Icon("capture",Theme.OnAccent);

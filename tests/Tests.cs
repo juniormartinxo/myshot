@@ -104,7 +104,7 @@ namespace MyShot {
      Snapshot(editor,output,"editor-toolbar-only.png");Snapshot(editor,output,"editor-style-popover.png");
      using(var after=doc.Render(null))Check(Same(before,after)&&mark.A==original,"style popover toggles preserve annotations and exported pixels");
     }
-    Check(Find<NumericUpDown>(editor).Visible,"style popover shows numeric inputs for the active tool");
+    Check(Find<NumberField>(editor).Visible,"style popover shows numeric inputs for the active tool");
     Key(editor,Keys.V);Point hit=OnCanvas(canvas,new Point(180,170));Mouse(canvas,"Down",hit);Mouse(canvas,"Up",hit);Check(canvas.SelectedBounds.HasValue,"object remains selectable after repeated panel layout changes");
     Find<Button>(editor,"Excluir (Del)").PerformClick();Check(doc.Marks.Count==0,"style popover deletes the selected object");Key(editor,Keys.Control|Keys.Z);Check(doc.Marks.Count==1,"collapsed-rail deletion can be undone");
     ToolButton(editor,"Texto");TextModal(()=>Mouse(canvas,"Down",OnCanvas(canvas,new Point(350,80))),dialog=>{dialog.Box.Text="Texto";dialog.Confirm();});Key(editor,Keys.V);
@@ -235,9 +235,25 @@ namespace MyShot {
     home.Prefs.StepTextColor=Color.Yellow.ToArgb();
     ToolButton(editor,"Etapa");var canvas=Find<Canvas>(editor);
     var doc=(Document)typeof(Editor).GetField("doc",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(editor);
-    Check(Find<ActionButton>(editor,"Cor da fonte").Visible,"step shows a font color option");
+    Check(Find<Label>(editor,"Fonte:").Visible,"step shows a font color option");
     Mouse(canvas,"Down",OnCanvas(canvas,new Point(50,50)));
     Check(doc.Marks.Count==1&&doc.Marks[0].Tool==Tool.Step&&doc.Marks[0].TextColor.ToArgb()==Color.Yellow.ToArgb(),"new step uses the chosen font color");
+   }
+   // Número da etapa grande continua centralizado no ponto da etapa (centro do contorno dos dígitos).
+   using(var source=new Bitmap(400,400))using(var doc=new Document(source)){
+    var step=new Mark{Tool=Tool.Step,A=new Point(200,200),B=new Point(200,200),Color=Color.Red,TextColor=Color.White,FontSize=80,FontFamily="Segoe UI",Number=7};
+    doc.Add(step);
+    using(var rendered=doc.Render(null)){
+     int minX=int.MaxValue,minY=int.MaxValue,maxX=-1,maxY=-1;
+     for(int y=0;y<rendered.Height;y++)for(int x=0;x<rendered.Width;x++){var c=rendered.GetPixel(x,y);if(c.R>240&&c.G>240&&c.B>240){minX=Math.Min(minX,x);minY=Math.Min(minY,y);maxX=Math.Max(maxX,x);maxY=Math.Max(maxY,y);}}
+     Check(maxX>=0&&Math.Abs((minX+maxX)/2-200)<=2&&Math.Abs((minY+maxY)/2-200)<=2,"big step number is centered on the step point");
+    }
+   }
+  }
+  static void NumberFieldSnapshot(string output){
+   using(var field=new NumberField{Maximum=200,Minimum=0,Value=100,Size=new Size(120,36)}){
+    field.DrawToBitmap(new Bitmap(120,36),new Rectangle(0,0,120,36));
+    using(var image=new Bitmap(120,36)){field.DrawToBitmap(image,new Rectangle(0,0,120,36));image.Save(Path.Combine(output,"number-field.png"));}
    }
   }
   [STAThread] static int Main(string[] args){
@@ -311,6 +327,7 @@ namespace MyShot {
     LightSnapshots(output);
     ScreenSnapshot(output);
     BarScreenSnapshot(output);
+    NumberFieldSnapshot(output);
     PolygonChecks();
     FaceChecks();
     StepTextChecks();

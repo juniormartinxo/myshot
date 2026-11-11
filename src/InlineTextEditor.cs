@@ -19,7 +19,7 @@ namespace MyShot {
   readonly InlineTextInput box=new InlineTextInput{Dock=DockStyle.Fill};
   readonly ToolStrip bar=new ToolStrip{GripStyle=ToolStripGripStyle.Hidden,Dock=DockStyle.Top,Renderer=new ShotStripRenderer(),BackColor=Theme.Surface,ImageScalingSize=new Size(Theme.BarIconSize,Theme.BarIconSize),Padding=new Padding(4)};
   readonly ToolStripButton colorItem,fontItem,boldItem,confirmItem,cancelItem;
-  readonly NumericUpDown sizeInput=new NumericUpDown{Minimum=6,Maximum=200,Width=56,BorderStyle=BorderStyle.FixedSingle,AccessibleName="Tamanho do texto"};
+  readonly NumberField sizeInput=new NumberField{Minimum=6,Maximum=200,Width=56,AccessibleName="Tamanho do texto"};
   Color color;string family;float size;bool bold;float pixelScale=1f;
   internal Action DragBegin;
   internal Action<Point> DragTo;
