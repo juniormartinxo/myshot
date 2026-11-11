@@ -17,7 +17,6 @@ namespace MyShot {
    // Sempre na frente das outras aplicações; só some ao fechar ou ir para a bandeja (e durante a captura).
    TopMost=true;
    // Vidro escuro: a janela inteira fica semitransparente, sem cantos arredondados.
-   Opacity=0.86;
    region=Add("Capturar região",()=>home.BeginCapture(false,false));region.Tag="primary";region.Image=Theme.Icon("capture",Theme.OnAccent);
    desktop=Add("Desktop inteiro",()=>home.BeginCapture(false,true));desktop.Image=Theme.Icon("desktop",Theme.Ink);
    direct=Add("Salvar desktop direto",()=>home.BeginCapture(true,true));direct.Image=Theme.Icon("save",Theme.Ink);
@@ -51,6 +50,8 @@ namespace MyShot {
   // Cantos suaves pelo DWM (Windows 11): região recortada não tem antialias e serrilha a borda.
   [System.Runtime.InteropServices.DllImport("dwmapi.dll")] static extern int DwmSetWindowAttribute(IntPtr hwnd,int attribute,ref int value,int size);
   protected override void OnHandleCreated(EventArgs e){base.OnHandleCreated(e);int corner=2;try{DwmSetWindowAttribute(Handle,33,ref corner,4);}catch(Exception){}}
+  // Opacidade configurável em Preferências (porcentagem).
+  internal void ApplyOpacity(int percent){Opacity=Math.Max(0.3,Math.Min(1,percent/100.0));}
   int Dip(int value){return (int)Math.Round(value*DeviceDpi/96f);}
 
   ToolStripButton Add(string text,Action action){

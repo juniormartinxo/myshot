@@ -24,6 +24,7 @@ namespace MyShot {
    string warning;Prefs=Preferences.Load(Preferences.PathName,out warning);
    CreateHandle();
    bar=new CaptureBar(this);
+   bar.ApplyOpacity(Prefs.BarOpacity);
    updateItem=new ToolStripMenuItem("Atualizar",null,(s,e)=>CheckForUpdates());
    moreMenu.Items.Add(updateItem);moreMenu.Items.Add("Ir para a bandeja",null,(s,e)=>bar.Hide());moreMenu.Items.Add(new ToolStripSeparator());moreMenu.Items.Add("Sair",null,(s,e)=>Exit());
    var menu=new ContextMenuStrip();menu.Items.Add("Capturar região",null,(s,e)=>BeginCapture(false,false));menu.Items.Add("Salvar desktop direto",null,(s,e)=>BeginCapture(true,true));menu.Items.Add("Abrir MyShot",null,(s,e)=>Restore());menu.Items.Add("Preferências",null,(s,e)=>{Restore();OpenSettings();});menu.Items.Add(new ToolStripSeparator());menu.Items.Add("Sair",null,(s,e)=>Exit());
@@ -66,7 +67,7 @@ namespace MyShot {
     IWin32Window owner=DialogOwner();
     if(f.ShowDialog(owner)==DialogResult.OK){
      bool themeChanged=f.Value.Appearance!=Prefs.Appearance;
-     try{f.Value.Save(Preferences.PathName);Prefs=f.Value;RegisterKeys();}catch(Exception e){UI.Error(owner,e);return;}
+     try{f.Value.Save(Preferences.PathName);Prefs=f.Value;RegisterKeys();bar.ApplyOpacity(Prefs.BarOpacity);}catch(Exception e){UI.Error(owner,e);return;}
      if(themeChanged)MessageBox.Show(owner,"O novo tema será aplicado na próxima abertura do MyShot.","MyShot",MessageBoxButtons.OK,MessageBoxIcon.Information);
      try{f.ApplyStartup();}catch(Exception e){MessageBox.Show(owner,"As outras preferências foram salvas, mas não foi possível alterar a inicialização com o Windows.\n\n"+e.Message,"MyShot",MessageBoxButtons.OK,MessageBoxIcon.Error);}
     }

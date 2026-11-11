@@ -35,6 +35,8 @@ namespace MyShot {
   [DataMember] public int Thickness = 4;
   [DataMember] public int Opacity = 100;
   [DataMember] public int StepTextColor = -1;
+  // Opacidade da barra de captura, em porcentagem (30 a 100).
+  [DataMember] public int BarOpacity = 86;
   [DataMember] public int FontSize = 16;
   [DataMember] public string FontFamily = "Segoe UI";
   [DataMember] public bool Filled;
@@ -47,7 +49,8 @@ namespace MyShot {
      var p=(Preferences)new DataContractJsonSerializer(typeof(Preferences)).ReadObject(stream);
      if(p==null || String.IsNullOrWhiteSpace(p.Folder) || !Path.IsPathRooted(p.Folder))throw new InvalidDataException("Pasta inválida");
      if(p.Format!="png" && p.Format!="jpg" && p.Format!="bmp")p.Format="png";
-     p.Thickness=Math.Max(1,Math.Min(40,p.Thickness)); p.Opacity=Math.Max(5,Math.Min(100,p.Opacity)); p.FontSize=Math.Max(8,Math.Min(120,p.FontSize));
+     p.Thickness=Math.Max(1,Math.Min(40,p.Thickness)); p.Opacity=Math.Max(5,Math.Min(100,p.Opacity));
+     p.BarOpacity=Math.Max(30,Math.Min(100,p.BarOpacity)); p.FontSize=Math.Max(8,Math.Min(120,p.FontSize));
      if(String.IsNullOrWhiteSpace(p.FontFamily))p.FontFamily="Segoe UI";
      if(p.CaptureKey<65||p.CaptureKey>90)p.CaptureKey=83;
      if(p.FileKey<65||p.FileKey>90)p.FileKey=70;
