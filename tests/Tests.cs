@@ -256,6 +256,32 @@ namespace MyShot {
     using(var image=new Bitmap(120,36)){field.DrawToBitmap(image,new Rectangle(0,0,120,36));image.Save(Path.Combine(output,"number-field.png"));}
    }
   }
+  // Mosaico cobre a última linha e coluna: o pixel de canto (azul) deixa de ser o original.
+  static void MosaicEdgeChecks(){
+   using(var source=new Bitmap(100,60))using(var doc=new Document(source)){
+    using(var g=Graphics.FromImage(source))g.Clear(Color.Gray);
+    source.SetPixel(99,59,Color.Blue);
+    var mosaic=new Mark{Tool=Tool.Mosaic,A=new Point(0,0),B=new Point(99,59),Width=1};
+    doc.Add(mosaic);
+    using(var rendered=doc.Render(null))Check(rendered.GetPixel(99,59)!=Color.Blue,"mosaic covers the last row and column");
+   }
+  }
+  // Assinatura do manifesto: aceita o original e recusa qualquer alteração ou assinatura de outra chave.
+  static void SignatureChecks(){
+   using(var signer=new System.Security.Cryptography.RSACryptoServiceProvider(2048))using(var other=new System.Security.Cryptography.RSACryptoServiceProvider(2048)){
+    string publicXml=signer.ToXmlString(false);
+    byte[] manifest=System.Text.Encoding.UTF8.GetBytes("version=0.0.2\nsha256="+new string('a',64)+"\nsize=123\n");
+    byte[] signature=signer.SignData(manifest,"SHA256");
+    Check(Updates.VerifySignature(manifest,signature,publicXml),"signed manifest verifies with its public key");
+    byte[] altered=(byte[])manifest.Clone();altered[9]^=1;
+    Check(!Updates.VerifySignature(altered,signature,publicXml),"altered manifest is rejected");
+    Check(!Updates.VerifySignature(manifest,other.SignData(manifest,"SHA256"),publicXml),"signature from another key is rejected");
+    var parsed=Updates.ParseManifest("version=0.0.2\nsha256="+new string('A',64)+"\nsize=123\n");
+    Check(parsed.Version=="0.0.2"&&parsed.Size==123&&parsed.Sha256==new string('a',64),"manifest parses version, size and lowercase sha256");
+    bool rejected=false;try{Updates.ParseManifest("version=0.0.2\nsize=0\n");}catch(Exception){rejected=true;}
+    Check(rejected,"incomplete or invalid manifest is rejected");
+   }
+  }
   [STAThread] static int Main(string[] args){
    string output=args.Length>0?args[0]:Path.GetFullPath("research/private/validation");Directory.CreateDirectory(output);
    Home.Quiet=true;
@@ -332,6 +358,8 @@ namespace MyShot {
     PolygonChecks();
     FaceChecks();
     StepTextChecks();
+    SignatureChecks();
+    MosaicEdgeChecks();
     Console.WriteLine("RESULT "+count+" assertions passed; interactive workflow is a separate required check.");return 0;
    }catch(Exception e){Console.Error.WriteLine(e);return 1;}
   }

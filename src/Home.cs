@@ -105,11 +105,14 @@ namespace MyShot {
    if(error!=null){MessageBox.Show(DialogOwner(),"Não foi possível verificar atualizações. Confira sua conexão e tente novamente.\n\n"+error,"MyShot",MessageBoxButtons.OK,MessageBoxIcon.Warning);return;}
    if(release==null){MessageBox.Show(DialogOwner(),"Ainda não há nenhuma versão publicada para atualizar.","MyShot",MessageBoxButtons.OK,MessageBoxIcon.Information);return;}
    if(!Updates.IsNewer(release.Tag)){MessageBox.Show(DialogOwner(),"Você já está na versão mais recente ("+AppInfo.Version+").","MyShot",MessageBoxButtons.OK,MessageBoxIcon.Information);return;}
-   if(Updates.Find(release,"MyShot.exe")==null||Updates.Find(release,"MyShot.exe.sha256")==null){MessageBox.Show(DialogOwner(),"A versão "+release.Tag+" existe, mas ainda não tem os arquivos de instalação publicados.","MyShot",MessageBoxButtons.OK,MessageBoxIcon.Information);return;}
+   // A assinatura do manifesto é validada antes de perguntar: uma release não assinada corretamente nem é oferecida.
+   Updates.SignedManifest manifest;
+   try{manifest=await System.Threading.Tasks.Task.Run(()=>Updates.ReadSignedManifest(release));}
+   catch(Exception e){MessageBox.Show(DialogOwner(),"A versão "+release.Tag+" não passou na verificação de assinatura, então não será oferecida.\n\n"+e.Message,"MyShot",MessageBoxButtons.OK,MessageBoxIcon.Warning);return;}
    if(MessageBox.Show(DialogOwner(),"Nova versão disponível: "+release.Tag+" (atual: "+AppInfo.Version+").\n\nBaixar e reiniciar o MyShot agora?","MyShot",MessageBoxButtons.YesNo,MessageBoxIcon.Question)!=DialogResult.Yes)return;
    SetUpdateBusy(true,"Baixando…");
    try{
-    var data=await System.Threading.Tasks.Task.Run(()=>Updates.DownloadVerified(release));
+    var data=await System.Threading.Tasks.Task.Run(()=>Updates.DownloadVerified(release,manifest));
     Updates.Install(data);
     Updates.Relaunch();
     Exit();

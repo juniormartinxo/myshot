@@ -9,6 +9,7 @@ $OutputDirectory = [IO.Path]::GetFullPath($OutputDirectory)
 New-Item -ItemType Directory -Force $OutputDirectory | Out-Null
 $sources = @(Get-ChildItem (Join-Path $root 'src') -Filter *.cs | ForEach-Object FullName)
 $resources = @(Get-ChildItem (Join-Path $root 'assets/icons') -Filter *.svg | ForEach-Object { "/resource:$($_.FullName),MyShot.icons.$($_.Name)" })
+$resources += "/resource:$root\assets\update-public-key.xml,MyShot.update-public-key.xml"
 & $compiler /nologo /target:winexe /platform:x64 /optimize+ /warnaserror+ "/out:$OutputDirectory\MyShot.exe" "/win32manifest:$root\src\app.manifest" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /reference:System.Runtime.Serialization.dll /reference:System.Xml.dll $sources $resources
 if ($LASTEXITCODE -ne 0) { throw 'Falha de compilação.' }
 Copy-Item -LiteralPath "$root\src\App.config" -Destination "$OutputDirectory\MyShot.exe.config" -Force

@@ -142,7 +142,8 @@ namespace MyShot {
   }
   static void Draw(Bitmap b,Mark m) {
    if(m.Tool==Tool.Mosaic) {
-    Rectangle r=Rectangle.Intersect(new Rectangle(Point.Empty,b.Size),m.Rect);
+    // Rect exclui a última linha e coluna (FromLTRB); o +1 garante que o mosaico cubra até a borda da imagem.
+    Rectangle r=Rectangle.Intersect(new Rectangle(Point.Empty,b.Size),Rectangle.FromLTRB(m.Rect.Left,m.Rect.Top,m.Rect.Right+1,m.Rect.Bottom+1));
     if(r.Width==0||r.Height==0)return;
     int block=Math.Max(4,(int)m.Width*3);
     // Every block samples existing pixels before painting. No source image is embedded in exports.
