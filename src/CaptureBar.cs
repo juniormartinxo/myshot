@@ -7,13 +7,15 @@ namespace MyShot {
  // Barra pequena no topo da tela, no estilo da barra de captura do Windows. É a única interface que o app mostra ao abrir.
  internal sealed class CaptureBar : Form {
   readonly Home home;
-  readonly ToolStrip strip=new ToolStrip{GripStyle=ToolStripGripStyle.Hidden,Dock=DockStyle.Fill,BackColor=Theme.Surface,Renderer=new ShotStripRenderer(),ImageScalingSize=new Size(Theme.IconSize,Theme.IconSize),Padding=new Padding(8,6,8,6)};
+  readonly ToolStrip strip=new ToolStrip{GripStyle=ToolStripGripStyle.Hidden,Dock=DockStyle.Fill,BackColor=Theme.Surface,Renderer=new ShotStripRenderer(),ImageScalingSize=new Size(Theme.IconSize,Theme.IconSize),Padding=new Padding(6,4,6,12)};
   readonly DragGrip grip;
   readonly ToolStripButton region,desktop,direct;
 
   internal CaptureBar(Home owner){
    home=owner;UI.Style(this);
    FormBorderStyle=FormBorderStyle.None;ShowInTaskbar=false;StartPosition=FormStartPosition.Manual;KeyPreview=true;BackColor=Theme.Surface;
+   // Vidro escuro: a janela inteira fica semitransparente, sem cantos arredondados.
+   Opacity=0.86;
    region=Add("Capturar região",()=>home.BeginCapture(false,false));region.Tag="primary";region.Image=Theme.Icon("capture",Theme.OnAccent);
    desktop=Add("Desktop inteiro",()=>home.BeginCapture(false,true));desktop.Image=Theme.Icon("desktop",Theme.Ink);
    direct=Add("Salvar desktop direto",()=>home.BeginCapture(true,true));direct.Image=Theme.Icon("save",Theme.Ink);
@@ -26,7 +28,6 @@ namespace MyShot {
    Controls.Add(grip);Controls.Add(strip);
    var content=strip.GetPreferredSize(Size.Empty);
    ClientSize=new Size(content.Width,content.Height+grip.Height);
-   Region=new Region(Theme.Round(new RectangleF(0,0,Width,Height),Dip(14)));
    KeyDown+=(s,e)=>{if(e.KeyCode==Keys.Escape)Hide();};
    strip.MouseDown+=(s,e)=>{
     if(e.Button!=MouseButtons.Left)return;
@@ -46,7 +47,9 @@ namespace MyShot {
   int Dip(int value){return (int)Math.Round(value*DeviceDpi/96f);}
 
   ToolStripButton Add(string text,Action action){
-   var b=new ToolStripButton{DisplayStyle=ToolStripItemDisplayStyle.Image,Padding=new Padding(8),Margin=new Padding(2,0,2,0),AccessibleName=text,ToolTipText=text};
+   // Botão quadrado: lado = ícone + margem interna dos dois lados; o ícone fica centralizado.
+   int pad=Dip(5),side=Theme.IconSize+2*pad;
+   var b=new ToolStripButton{DisplayStyle=ToolStripItemDisplayStyle.Image,AutoSize=false,Size=new Size(side,side),Padding=new Padding(pad),ImageAlign=ContentAlignment.MiddleCenter,Margin=new Padding(2,0,2,0),AccessibleName=text,ToolTipText=text};
    b.Click+=(s,e)=>action();strip.Items.Add(b);return b;
   }
 

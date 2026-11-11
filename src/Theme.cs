@@ -91,6 +91,7 @@ namespace MyShot {
   protected override void OnPaint(PaintEventArgs e){e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;using(var path=Theme.Round(new RectangleF(0,0,Width-1,Height-1),10))using(var b=new SolidBrush(Theme.Accent))e.Graphics.FillPath(b,path);Theme.DrawIcon(e.Graphics,"capture",Theme.OnAccent,new Rectangle(Width/6,Height/6,Width*2/3,Height*2/3));}
  }
  internal sealed class ShotStripRenderer : ToolStripProfessionalRenderer {
+
   internal ShotStripRenderer(){RoundedEdges=false;}
   protected override void OnRenderItemImage(ToolStripItemImageRenderEventArgs e){
    string name;Color color;
