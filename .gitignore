@@ -1,0 +1,36 @@
+# Pesquisa privada e material de referência (não versionar)
+research/private/
+**/ScreenshotHD*
+
+# Saídas de build e distribuição local
+artifacts/
+bin/
+obj/
+*.exe
+*.pdb
+*.cache
+TestResults/
+
+# Ferramentas locais
+.tools/
+
+# Visual Studio / editores
+.vs/
+.vscode/
+*.user
+*.suo
+*.userprefs
+
+# NuGet (o projeto não usa, mas evita lixo se algum dia usar)
+packages/
+*.nupkg
+
+# Logs e arquivos temporários
+*.log
+*.tmp
+*.bak
+
+# Arquivos do sistema operacional
+Thumbs.db
+Desktop.ini
+$RECYCLE.BIN/
