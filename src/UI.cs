@@ -84,10 +84,10 @@ namespace MyShot {
   internal SettingsDialog(Preferences current){
    UI.Style(this);Text="MyShot · Preferências";ClientSize=new Size(640,668);FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;MinimizeBox=false;
    var panel=new TableLayoutPanel{Dock=DockStyle.Fill,Padding=new Padding(28),ColumnCount=2,RowCount=14};panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,168));panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
-   foreach(int height in new[]{42,40,40,52,42,42,40,44,44,40,32,52,24,52})panel.RowStyles.Add(new RowStyle(SizeType.Absolute,height));
+   foreach(int height in new[]{42,48,40,8,42,42,40,44,44,40,32,52,24,52})panel.RowStyles.Add(new RowStyle(SizeType.Absolute,height));
    var title=Theme.Label("Preferências",20,true);panel.Controls.Add(title,0,0);panel.SetColumnSpan(title,2);
    var subtitle=Theme.Label("Defina onde salvar e como iniciar suas capturas.",10,false);panel.Controls.Add(subtitle,0,1);panel.SetColumnSpan(subtitle,2);
-   var folder=new TextBox{Text=current.Folder,AccessibleName="Pasta de saída"};var browse=UI.Button("Escolher pasta…",()=>{using(var d=new FolderBrowserDialog{SelectedPath=folder.Text})if(d.ShowDialog(this)==DialogResult.OK)folder.Text=d.SelectedPath;},false);browse.Margin=new Padding(3,0,0,8);
+   var folder=new TextBox{Text=current.Folder,AccessibleName="Pasta de saída"};var browse=(ActionButton)UI.Button("",()=>{using(var d=new FolderBrowserDialog{SelectedPath=folder.Text})if(d.ShowDialog(this)==DialogResult.OK)folder.Text=d.SelectedPath;},false);browse.Icon="folder";browse.AccessibleName="Escolher pasta";browse.AutoSize=false;browse.MinimumSize=new Size(40,40);browse.Size=new Size(40,40);browse.Margin=new Padding(8,0,0,8);
    var format=new ChoiceBox{Width=130,AccessibleName="Formato da imagem"};format.Items.AddRange(new object[]{"png","jpg","bmp"});format.SelectedItem=current.Format;
    var modFlags=new[]{Preferences.ModCtrl,Preferences.ModAlt,Preferences.ModShift,Preferences.ModWin};var modNames=new[]{"Ctrl","Alt","Shift","Win"};
    var modRow=new FlowLayoutPanel{AutoSize=true,WrapContents=false,Margin=Padding.Empty};var modBoxes=new ToggleBox[4];
@@ -97,7 +97,7 @@ namespace MyShot {
    var sound=new ToggleBox{Text="Reproduzir som após capturar",Checked=current.Sound,AutoSize=true};
    var barOpacity=new NumberField{Minimum=30,Maximum=100,Value=current.BarOpacity,Width=64,AccessibleName="Opacidade da barra"};
    var soundRow=new FlowLayoutPanel{AutoSize=true,WrapContents=false,Margin=Padding.Empty};soundRow.Controls.Add(sound);var barLabel=Theme.Label("Opacidade (%)",9,true);barLabel.Margin=new Padding(16,6,6,0);soundRow.Controls.Add(barLabel);soundRow.Controls.Add(barOpacity);
-   panel.Controls.Add(Theme.Label("Pasta de saída",10,true),0,2);panel.Controls.Add(ThemedFrame.Wrap(folder),1,2);panel.Controls.Add(browse,1,3);var appearance=new ChoiceBox{Width=130,AccessibleName="Aparência"};appearance.Items.AddRange(new object[]{"Escuro","Claro"});appearance.SelectedIndex=current.Appearance=="light"?1:0;
+   panel.Controls.Add(Theme.Label("Pasta de saída",10,true),0,2);var folderRow=new TableLayoutPanel{Dock=DockStyle.Fill,ColumnCount=2,RowCount=1,Margin=Padding.Empty};folderRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));folderRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,48));folderRow.RowStyles.Add(new RowStyle(SizeType.Percent,100));folderRow.Controls.Add(ThemedFrame.Wrap(folder),0,0);folderRow.Controls.Add(browse,1,0);panel.Controls.Add(folderRow,1,2);var appearance=new ChoiceBox{Width=130,AccessibleName="Aparência"};appearance.Items.AddRange(new object[]{"Escuro","Claro"});appearance.SelectedIndex=current.Appearance=="light"?1:0;
    var appearanceLabel=Theme.Label("Aparência",10,true);appearanceLabel.Margin=new Padding(28,8,8,0);var formatRow=new FlowLayoutPanel{Dock=DockStyle.Fill,WrapContents=false,Margin=Padding.Empty};formatRow.Controls.Add(format);formatRow.Controls.Add(appearanceLabel);formatRow.Controls.Add(appearance);
    panel.Controls.Add(Theme.Label("Formato",10,true),0,4);panel.Controls.Add(formatRow,1,4);
    var section=Theme.Label("Atalhos globais",12.5f,true);section.Margin=new Padding(0,8,0,0);panel.Controls.Add(section,0,5);panel.SetColumnSpan(section,2);panel.Controls.Add(modRow,1,6);
