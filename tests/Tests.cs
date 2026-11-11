@@ -59,7 +59,7 @@ namespace MyShot {
     var styled=new Mark{Tool=Tool.Text,Text="a",A=new Point(5,5),Color=Color.Black,FontFamily="Segoe UI",FontSize=20};doc.Add(styled);Check(doc.EditTextStyle(styled,"b",Color.Red,"Arial",32,true,styled.A)&&styled.Text=="b"&&styled.Color==Color.Red&&styled.FontFamily=="Arial"&&styled.FontSize==32&&styled.Bold,"text style (color, font, size, bold) is editable");doc.Undo();Check(styled.Text=="a"&&styled.Color==Color.Black&&styled.FontFamily=="Segoe UI"&&styled.FontSize==20&&!styled.Bold,"single undo restores the whole text style");doc.Undo();
    }
    using(var home=new Home())using(var editor=new Editor(source,home)){
-    editor.Show();Application.DoEvents();ToolButton(editor,"Estilo");var canvas=Find<Canvas>(editor);
+    editor.Show();Application.DoEvents();var canvas=Find<Canvas>(editor);
     var doc=(Document)typeof(Editor).GetField("doc",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(editor);
     ToolButton(editor,"Texto");
     TextModal(()=>Mouse(canvas,"Down",OnCanvas(canvas,new Point(100,100))),dialog=>{dialog.Box.Text="Texto original";dialog.Confirm();});
@@ -101,10 +101,10 @@ namespace MyShot {
     ToolButton(editor,"Linha");Mouse(canvas,"Down",OnCanvas(canvas,new Point(80,100)));Mouse(canvas,"Up",OnCanvas(canvas,new Point(280,240)));
     var doc=(Document)typeof(Editor).GetField("doc",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(editor);var mark=doc.Marks[0];var original=mark.A;
     using(var before=doc.Render(null)){
-     Snapshot(editor,output,"editor-toolbar-only.png");ToolButton(editor,"Estilo");Snapshot(editor,output,"editor-style-popover.png");ToolButton(editor,"Estilo");
+     Snapshot(editor,output,"editor-toolbar-only.png");Snapshot(editor,output,"editor-style-popover.png");
      using(var after=doc.Render(null))Check(Same(before,after)&&mark.A==original,"style popover toggles preserve annotations and exported pixels");
     }
-    ToolButton(editor,"Estilo");Check(Find<NumericUpDown>(editor).Visible,"style popover shows numeric inputs for the active tool");
+    Check(Find<NumericUpDown>(editor).Visible,"style popover shows numeric inputs for the active tool");
     Key(editor,Keys.V);Point hit=OnCanvas(canvas,new Point(180,170));Mouse(canvas,"Down",hit);Mouse(canvas,"Up",hit);Check(canvas.SelectedBounds.HasValue,"object remains selectable after repeated panel layout changes");
     Find<Button>(editor,"Excluir (Del)").PerformClick();Check(doc.Marks.Count==0,"style popover deletes the selected object");Key(editor,Keys.Control|Keys.Z);Check(doc.Marks.Count==1,"collapsed-rail deletion can be undone");
     ToolButton(editor,"Texto");TextModal(()=>Mouse(canvas,"Down",OnCanvas(canvas,new Point(350,80))),dialog=>{dialog.Box.Text="Texto";dialog.Confirm();});Key(editor,Keys.V);
@@ -182,7 +182,7 @@ namespace MyShot {
     using(var g=Graphics.FromImage(fixture))g.Clear(Color.SteelBlue);
     using(var editor=new Editor(fixture,home)){
      editor.Show();editor.Activate();Application.DoEvents();
-     ToolButton(editor,"Estilo");Application.DoEvents();System.Threading.Thread.Sleep(400);Application.DoEvents();
+     Application.DoEvents();System.Threading.Thread.Sleep(400);Application.DoEvents();
      using(var image=new Bitmap(editor.Width,editor.Height))using(var g=Graphics.FromImage(image)){g.CopyFromScreen(editor.Location,Point.Empty,image.Size);image.Save(Path.Combine(output,"editor-screen-popover.png"));}
     }
    }
@@ -194,6 +194,38 @@ namespace MyShot {
     var bar=home.Bar;
     using(var image=new Bitmap(bar.Width,bar.Height))using(var g=Graphics.FromImage(image)){g.CopyFromScreen(bar.Location,Point.Empty,image.Size);image.Save(Path.Combine(output,"bar-screen.png"));}
     bar.Hide();
+   }
+  }
+  // Polígono: três cliques em volta e clique de volta no primeiro vértice fecham um triângulo; Enter também fecha; Esc cancela.
+  static void PolygonChecks(){
+   using(var home=new Home())using(var fixture=new Bitmap(300,200))using(var editor=new Editor(fixture,home)){
+    editor.Show();Application.DoEvents();ToolButton(editor,"Polígono");var canvas=Find<Canvas>(editor);
+    var doc=(Document)typeof(Editor).GetField("doc",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(editor);
+    Mouse(canvas,"Down",OnCanvas(canvas,new Point(20,20)));Mouse(canvas,"Down",OnCanvas(canvas,new Point(120,20)));Mouse(canvas,"Down",OnCanvas(canvas,new Point(70,100)));
+    Check(doc.Marks.Count==0,"polygon stays in progress until it is closed");
+    typeof(Control).GetMethod("OnMouseCaptureChanged",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).Invoke(canvas,new object[]{EventArgs.Empty});
+    Mouse(canvas,"Down",OnCanvas(canvas,new Point(20,20)));
+    Check(doc.Marks.Count==1&&doc.Marks[0].Tool==Tool.Polygon&&doc.Marks[0].Points.Count==3,"clicking the first vertex closes a triangle");
+    doc.Undo();Check(doc.Marks.Count==0,"closing a polygon is undoable");
+    Mouse(canvas,"Down",OnCanvas(canvas,new Point(20,20)));Mouse(canvas,"Down",OnCanvas(canvas,new Point(120,20)));Mouse(canvas,"Down",OnCanvas(canvas,new Point(120,100)));
+    Key(editor,Keys.Enter);
+    Check(doc.Marks.Count==1&&doc.Marks[0].Points.Count==3,"Enter closes the polygon");
+    Mouse(canvas,"Down",OnCanvas(canvas,new Point(10,150)));Mouse(canvas,"Down",OnCanvas(canvas,new Point(60,150)));Key(editor,Keys.Escape);
+    Check(doc.Marks.Count==1,"Esc cancels an unfinished polygon");
+   }
+  }
+  // Face: fica aberta até ser confirmada (Enter), e a face seguinte se encaixa nos vértices já criados.
+  static void FaceChecks(){
+   using(var home=new Home())using(var fixture=new Bitmap(300,200))using(var editor=new Editor(fixture,home)){
+    editor.Show();Application.DoEvents();ToolButton(editor,"Face");var canvas=Find<Canvas>(editor);
+    var doc=(Document)typeof(Editor).GetField("doc",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(editor);
+    Mouse(canvas,"Down",OnCanvas(canvas,new Point(20,20)));Mouse(canvas,"Down",OnCanvas(canvas,new Point(120,20)));Mouse(canvas,"Down",OnCanvas(canvas,new Point(70,100)));
+    Check(doc.Marks.Count==0,"face stays open after three vertices");
+    Key(editor,Keys.Enter);
+    Check(doc.Marks.Count==1&&doc.Marks[0].Tool==Tool.Face&&doc.Marks[0].Points.Count==3,"Enter finishes a face");
+    Mouse(canvas,"Down",OnCanvas(canvas,new Point(121,21)));Mouse(canvas,"Down",OnCanvas(canvas,new Point(200,150)));Mouse(canvas,"Down",OnCanvas(canvas,new Point(200,60)));
+    Key(editor,Keys.Enter);
+    Check(doc.Marks.Count==2&&doc.Marks[1].Points[0]==doc.Marks[0].Points[1],"next face snaps its vertex to an existing face vertex");
    }
   }
   [STAThread] static int Main(string[] args){
@@ -267,6 +299,8 @@ namespace MyShot {
     LightSnapshots(output);
     ScreenSnapshot(output);
     BarScreenSnapshot(output);
+    PolygonChecks();
+    FaceChecks();
     Console.WriteLine("RESULT "+count+" assertions passed; interactive workflow is a separate required check.");return 0;
    }catch(Exception e){Console.Error.WriteLine(e);return 1;}
   }

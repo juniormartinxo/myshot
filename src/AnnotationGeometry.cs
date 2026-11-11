@@ -12,7 +12,7 @@ namespace MyShot {
      bounds=new RectangleF(mark.A,graphics.MeasureString(mark.Text,font));
     }
    }else if(mark.Tool==Tool.Step){float d=mark.FontSize*1.7f;bounds=new RectangleF(mark.A.X-d/2,mark.A.Y-d/2,d,d);}
-   else if(mark.Tool==Tool.Pencil&&mark.Points.Count>0){float l=mark.Points[0].X,t=mark.Points[0].Y,r=l,b=t;foreach(var p in mark.Points){l=Math.Min(l,p.X);t=Math.Min(t,p.Y);r=Math.Max(r,p.X);b=Math.Max(b,p.Y);}bounds=RectangleF.FromLTRB(l,t,r,b);}
+   else if((mark.Tool==Tool.Pencil||mark.Tool==Tool.Polygon||mark.Tool==Tool.Face)&&mark.Points.Count>0){float l=mark.Points[0].X,t=mark.Points[0].Y,r=l,b=t;foreach(var p in mark.Points){l=Math.Min(l,p.X);t=Math.Min(t,p.Y);r=Math.Max(r,p.X);b=Math.Max(b,p.Y);}bounds=RectangleF.FromLTRB(l,t,r,b);}
    if(mark.Tool==Tool.Arrow&&mark.A!=mark.B){foreach(var p in ArrowHead(mark)){bounds=RectangleF.FromLTRB(Math.Min(bounds.Left,p.X),Math.Min(bounds.Top,p.Y),Math.Max(bounds.Right,p.X),Math.Max(bounds.Bottom,p.Y));}}
    if(mark.Tool!=Tool.Text&&mark.Tool!=Tool.Mosaic&&mark.Tool!=Tool.Step)bounds.Inflate(Math.Max(.5f,mark.Width/2),Math.Max(.5f,mark.Width/2));
    return bounds;

@@ -57,7 +57,7 @@ namespace MyShot {
    } finally { if(File.Exists(temp))File.Delete(temp); }
   }
  }
- internal enum Tool { Line, Rectangle, Ellipse, Arrow, Pencil, Text, Mosaic, Step }
+ internal enum Tool { Line, Rectangle, Ellipse, Arrow, Pencil, Text, Mosaic, Step, Polygon, Face }
  internal sealed class Mark {
   internal Tool Tool;
   internal Point A,B;
@@ -154,6 +154,7 @@ namespace MyShot {
      case Tool.Rectangle:if(r.Width>0&&r.Height>0){if(m.Filled)g.FillRectangle(brush,r);else g.DrawRectangle(pen,r);}break;
      case Tool.Ellipse:if(r.Width>0&&r.Height>0){if(m.Filled)g.FillEllipse(brush,r);else g.DrawEllipse(pen,r);}break;
      case Tool.Pencil:if(m.Points.Count>1)g.DrawLines(pen,m.Points.ToArray());else g.FillEllipse(brush,m.A.X-m.Width/2,m.A.Y-m.Width/2,m.Width,m.Width);break;
+     case Tool.Polygon:case Tool.Face:if(m.Points.Count>1){var pts=m.Points.ToArray();if(m.Filled&&pts.Length>2)g.FillPolygon(brush,pts);g.DrawPolygon(pen,pts);}break;
      case Tool.Text:using(var font=new Font(m.FontFamily,m.FontSize,m.Bold?FontStyle.Bold:FontStyle.Regular,GraphicsUnit.Pixel))g.DrawString(m.Text,font,brush,m.A);break;
      case Tool.Step:
       float d=m.FontSize*1.7f;g.FillEllipse(brush,m.A.X-d/2,m.A.Y-d/2,d,d);
