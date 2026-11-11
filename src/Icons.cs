@@ -13,7 +13,6 @@ namespace MyShot {
  internal static class SvgIcons {
   sealed class Shape {internal readonly List<GraphicsPath> Paths=new List<GraphicsPath>();internal float Stroke=2f;}
   static readonly Dictionary<string,Shape> cache=new Dictionary<string,Shape>();
-  static readonly Regex tokens=new Regex(@"[MmLlHhVvCcSsQqTtAaZz]|[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?");
 
   // Desenha o ícone com a cor dada, ocupando o retângulo informado (o viewBox 24×24 é escalado para ele).
   internal static void Draw(Graphics g,string name,Color color,Rectangle rect){
@@ -76,26 +75,38 @@ namespace MyShot {
    return points;
   }
 
+  // Leitor posicional do atributo d. Flags de arco (0/1) são lidos um caractere por vez, porque o Lucide os escreve grudados (ex.: "010").
+  sealed class PathCursor {
+   static readonly Regex numberAt=new Regex(@"\G[-+]?(?:\d*\.\d+|\d+\.?)(?:[eE][-+]?\d+)?");
+   readonly string s;int pos;
+   internal PathCursor(string text){s=text;}
+   void SkipSeparators(){while(pos<s.Length&&(char.IsWhiteSpace(s[pos])||s[pos]==','))pos++;}
+   internal bool AtEnd(){SkipSeparators();return pos>=s.Length;}
+   internal bool NextIsCommand(){SkipSeparators();return pos<s.Length&&char.IsLetter(s[pos]);}
+   internal char ReadCommand(){SkipSeparators();return s[pos++];}
+   internal double ReadNumber(){SkipSeparators();var m=numberAt.Match(s,pos);if(!m.Success)throw new FormatException("Número inválido no caminho SVG.");pos+=m.Length;return double.Parse(m.Value,CultureInfo.InvariantCulture);}
+   internal bool ReadFlag(){SkipSeparators();return s[pos++]=='1';}
+  }
+
   // Interpreta o atributo d de <path>: M/L/H/V/C/S/Q/T/A/Z, em maiúsculas (absoluto) e minúsculas (relativo).
   static void ParsePath(GraphicsPath path,string d){
-   var list=new List<string>();foreach(Match m in tokens.Matches(d??""))list.Add(m.Value);
-   int i=0;char cmd='M';double cx=0,cy=0,sx=0,sy=0,ctrlX=0,ctrlY=0;char lastType=' ';
-   Func<double> next=()=>double.Parse(list[i++],CultureInfo.InvariantCulture);
-   while(i<list.Count){
-    if(char.IsLetter(list[i][0])){cmd=list[i][0];i++;if(cmd=='Z'||cmd=='z'){path.CloseFigure();cx=sx;cy=sy;lastType='Z';continue;}}
+   var r=new PathCursor(d??"");
+   char cmd='M';double cx=0,cy=0,sx=0,sy=0,ctrlX=0,ctrlY=0;char lastType=' ';
+   while(!r.AtEnd()){
+    if(r.NextIsCommand()){cmd=r.ReadCommand();if(cmd=='Z'||cmd=='z'){path.CloseFigure();cx=sx;cy=sy;lastType='Z';continue;}}
     else if(cmd=='Z'||cmd=='z')break;
     bool rel=char.IsLower(cmd);char up=char.ToUpperInvariant(cmd);
     double ox=rel?cx:0,oy=rel?cy:0;
     switch(up){
-     case 'M':{double x=next()+ox,y=next()+oy;path.StartFigure();cx=sx=x;cy=sy=y;cmd=rel?'l':'L';lastType='M';}break;
-     case 'L':{double x=next()+ox,y=next()+oy;path.AddLine((float)cx,(float)cy,(float)x,(float)y);cx=x;cy=y;lastType='L';}break;
-     case 'H':{double x=next()+(rel?cx:0);path.AddLine((float)cx,(float)cy,(float)x,(float)cy);cx=x;lastType='H';}break;
-     case 'V':{double y=next()+(rel?cy:0);path.AddLine((float)cx,(float)cy,(float)cx,(float)y);cy=y;lastType='V';}break;
-     case 'C':{double x1=next()+ox,y1=next()+oy,x2=next()+ox,y2=next()+oy,x=next()+ox,y=next()+oy;Cubic(path,cx,cy,x1,y1,x2,y2,x,y);ctrlX=x2;ctrlY=y2;cx=x;cy=y;lastType='C';}break;
-     case 'S':{double x1=lastType=='C'||lastType=='S'?2*cx-ctrlX:cx,y1=lastType=='C'||lastType=='S'?2*cy-ctrlY:cy;double x2=next()+ox,y2=next()+oy,x=next()+ox,y=next()+oy;Cubic(path,cx,cy,x1,y1,x2,y2,x,y);ctrlX=x2;ctrlY=y2;cx=x;cy=y;lastType='S';}break;
-     case 'Q':{double qx=next()+ox,qy=next()+oy,x=next()+ox,y=next()+oy;Quad(path,cx,cy,qx,qy,x,y);ctrlX=qx;ctrlY=qy;cx=x;cy=y;lastType='Q';}break;
-     case 'T':{double qx=lastType=='Q'||lastType=='T'?2*cx-ctrlX:cx,qy=lastType=='Q'||lastType=='T'?2*cy-ctrlY:cy;double x=next()+ox,y=next()+oy;Quad(path,cx,cy,qx,qy,x,y);ctrlX=qx;ctrlY=qy;cx=x;cy=y;lastType='T';}break;
-     case 'A':{double rx=next(),ry=next(),phi=next();bool fa=next()!=0,fs=next()!=0;double x=next()+ox,y=next()+oy;Arc(path,cx,cy,rx,ry,phi,fa,fs,x,y);cx=x;cy=y;lastType='A';}break;
+     case 'M':{double x=r.ReadNumber()+ox,y=r.ReadNumber()+oy;path.StartFigure();cx=sx=x;cy=sy=y;cmd=rel?'l':'L';lastType='M';}break;
+     case 'L':{double x=r.ReadNumber()+ox,y=r.ReadNumber()+oy;path.AddLine((float)cx,(float)cy,(float)x,(float)y);cx=x;cy=y;lastType='L';}break;
+     case 'H':{double x=r.ReadNumber()+(rel?cx:0);path.AddLine((float)cx,(float)cy,(float)x,(float)cy);cx=x;lastType='H';}break;
+     case 'V':{double y=r.ReadNumber()+(rel?cy:0);path.AddLine((float)cx,(float)cy,(float)cx,(float)y);cy=y;lastType='V';}break;
+     case 'C':{double x1=r.ReadNumber()+ox,y1=r.ReadNumber()+oy,x2=r.ReadNumber()+ox,y2=r.ReadNumber()+oy,x=r.ReadNumber()+ox,y=r.ReadNumber()+oy;Cubic(path,cx,cy,x1,y1,x2,y2,x,y);ctrlX=x2;ctrlY=y2;cx=x;cy=y;lastType='C';}break;
+     case 'S':{double x1=lastType=='C'||lastType=='S'?2*cx-ctrlX:cx,y1=lastType=='C'||lastType=='S'?2*cy-ctrlY:cy;double x2=r.ReadNumber()+ox,y2=r.ReadNumber()+oy,x=r.ReadNumber()+ox,y=r.ReadNumber()+oy;Cubic(path,cx,cy,x1,y1,x2,y2,x,y);ctrlX=x2;ctrlY=y2;cx=x;cy=y;lastType='S';}break;
+     case 'Q':{double qx=r.ReadNumber()+ox,qy=r.ReadNumber()+oy,x=r.ReadNumber()+ox,y=r.ReadNumber()+oy;Quad(path,cx,cy,qx,qy,x,y);ctrlX=qx;ctrlY=qy;cx=x;cy=y;lastType='Q';}break;
+     case 'T':{double qx=lastType=='Q'||lastType=='T'?2*cx-ctrlX:cx,qy=lastType=='Q'||lastType=='T'?2*cy-ctrlY:cy;double x=r.ReadNumber()+ox,y=r.ReadNumber()+oy;Quad(path,cx,cy,qx,qy,x,y);ctrlX=qx;ctrlY=qy;cx=x;cy=y;lastType='T';}break;
+     case 'A':{double rx=r.ReadNumber(),ry=r.ReadNumber(),phi=r.ReadNumber();bool fa=r.ReadFlag(),fs=r.ReadFlag();double x=r.ReadNumber()+ox,y=r.ReadNumber()+oy;Arc(path,cx,cy,rx,ry,phi,fa,fs,x,y);cx=x;cy=y;lastType='A';}break;
      default:return;
     }
    }

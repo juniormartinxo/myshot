@@ -7,7 +7,7 @@ namespace MyShot {
   internal static RectangleF Bounds(Mark mark){
    RectangleF bounds=mark.Rect;
    if(mark.Tool==Tool.Text){
-    using(var bitmap=new Bitmap(1,1))using(var graphics=Graphics.FromImage(bitmap))using(var font=new Font(mark.FontFamily,mark.FontSize,FontStyle.Regular,GraphicsUnit.Pixel)){
+    using(var bitmap=new Bitmap(1,1))using(var graphics=Graphics.FromImage(bitmap))using(var font=new Font(mark.FontFamily,mark.FontSize,mark.Bold?FontStyle.Bold:FontStyle.Regular,GraphicsUnit.Pixel)){
      graphics.TextRenderingHint=System.Drawing.Text.TextRenderingHint.AntiAliasGridFit;
      bounds=new RectangleF(mark.A,graphics.MeasureString(mark.Text,font));
     }

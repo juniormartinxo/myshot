@@ -74,19 +74,6 @@ namespace MyShot {
    if(SelectedBounds.HasValue){var bounds=SelectedBounds.Value;var view=View;float sx=(float)view.Width/Image.Width,sy=(float)view.Height/Image.Height;var r=new RectangleF(view.X+bounds.X*sx,view.Y+bounds.Y*sy,Math.Max(1,bounds.Width*sx),Math.Max(1,bounds.Height*sy));r.Inflate(3,3);var state=e.Graphics.Save();e.Graphics.SetClip(Rectangle.Inflate(view,5,5));using(var backdrop=new Pen(Theme.Canvas,3))e.Graphics.DrawRectangle(backdrop,r.X,r.Y,r.Width,r.Height);using(var pen=new Pen(Theme.Accent,1.5f)){pen.DashStyle=DashStyle.Dash;e.Graphics.DrawRectangle(pen,r.X,r.Y,r.Width,r.Height);}e.Graphics.Restore(state);}
   }
  }
- internal sealed class TextDialog : Form {
-  readonly TextBox box=new TextBox{Multiline=true,Dock=DockStyle.Fill,AcceptsReturn=true,ScrollBars=ScrollBars.Vertical,BorderStyle=BorderStyle.FixedSingle,BackColor=Theme.Surface,ForeColor=Theme.Ink,AccessibleName="Texto da anotação"};
-  internal string Value {get{return box.Text;}}
-  internal TextDialog(string existingText=null){
-   bool editing=existingText!=null;UI.Style(this);Text=editing?"Editar texto":"Adicionar texto";ClientSize=new Size(460,280);Padding=new Padding(24);MinimumSize=new Size(400,300);
-   var title=Theme.Label(editing?"Edite o texto da anotação":"O que você quer destacar?",12.5f,true);title.Dock=DockStyle.Top;title.Height=40;title.AutoSize=false;
-   var footer=new FlowLayoutPanel{Dock=DockStyle.Bottom,Height=56,FlowDirection=FlowDirection.RightToLeft,Padding=new Padding(0,12,0,0)};
-   var b=UI.Button(editing?"Salvar texto":"Adicionar texto",()=>{if(String.IsNullOrWhiteSpace(box.Text))return;DialogResult=DialogResult.OK;Close();},true);
-   var cancel=UI.Button("Cancelar",()=>Close(),false);cancel.DialogResult=DialogResult.Cancel;footer.Controls.Add(b);footer.Controls.Add(cancel);
-   box.Text=existingText??"";box.TextChanged+=(s,e)=>b.Enabled=!String.IsNullOrWhiteSpace(box.Text);b.Enabled=!String.IsNullOrWhiteSpace(box.Text);
-   Controls.Add(box);Controls.Add(title);Controls.Add(footer);CancelButton=cancel;Shown+=(s,e)=>{box.Focus();box.SelectAll();};
-  }
- }
  internal sealed class SettingsDialog : Form {
   internal Preferences Value;
   readonly WindowsStartup startup=new WindowsStartup(Application.ExecutablePath);

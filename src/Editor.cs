@@ -16,6 +16,7 @@ namespace MyShot {
   readonly CheckBox fillInput;
   readonly Button fontButton,editTextButton,deleteButton;
   static readonly string[] ToolNames={"Linha","Retângulo","Elipse","Seta","Desenho","Texto","Mosaico","Etapa"};
+  InlineTextEditor textEditor;Mark textTarget,textSnapshot;bool textIsNew;
   Tool selectedTool=Tool.Arrow;Mark pending,selectedMark,movePreview;Point moveStart;bool moving,moveMode,dirty=true;bool copied;
 
   internal Editor(Bitmap source,Home owner) {
@@ -89,12 +90,13 @@ namespace MyShot {
   void RefreshImage(){if(selectedMark!=null&&!doc.Marks.Contains(selectedMark)){selectedMark=null;UpdateInspector();}var old=canvas.Image;canvas.Image=doc.Render(pending,selectedMark,movePreview);if(old!=null)old.Dispose();canvas.SelectedBounds=moveMode&&selectedMark!=null?(RectangleF?)AnnotationGeometry.Bounds(movePreview??selectedMark):null;canvas.Invalidate();undo.Enabled=doc.CanUndo;redo.Enabled=doc.CanRedo;info.Text=doc.Original.Width+" × "+doc.Original.Height+" px  ·  "+doc.Marks.Count+" anotações  ·  "+(moveMode?"Mover: arraste um objeto  ·  Esc cancela":"V: selecionar e mover objetos");}
   void Changed(){dirty=true;copied=false;RefreshImage();}
   void Down(object s,MouseEventArgs e){
+   if(textEditor!=null){textEditor.Confirm();return;}
    if(e.Button!=MouseButtons.Left||!canvas.View.Contains(e.Location))return;
    var p=Geometry.ImagePoint(e.Location,canvas.View,doc.Original.Size);var pref=home.Prefs;
    canvas.Focus();
    if(moveMode){selectedMark=doc.HitTest(p,HitTolerance());movePreview=null;moving=selectedMark!=null;moveStart=p;UpdateInspector();if(moving){canvas.Capture=true;canvas.Cursor=Cursors.SizeAll;}RefreshImage();return;}
    var mark=new Mark{Tool=selectedTool,A=p,B=p,Color=Color.FromArgb((int)(255*pref.Opacity/100.0),Color.FromArgb(pref.Color)),Width=pref.Thickness,Filled=pref.Filled,FontSize=pref.FontSize,FontFamily=pref.FontFamily,Number=doc.NextStep};
-   if(selectedTool==Tool.Text){using(var f=new TextDialog()){if(f.ShowDialog(this)!=DialogResult.OK||String.IsNullOrWhiteSpace(f.Value))return;mark.Text=f.Value;}doc.Add(mark);Changed();return;}
+   if(selectedTool==Tool.Text){StartTextEdit(mark,true);return;}
    if(selectedTool==Tool.Step){doc.Add(mark);Changed();return;}
    mark.Points.Add(p);pending=mark;canvas.Capture=true;
   }
@@ -121,17 +123,16 @@ namespace MyShot {
   }
   void EditSelectedText(){
    if(selectedMark==null||selectedMark.Tool!=Tool.Text)return;
-   CancelInteraction();var mark=selectedMark;
-   using(var dialog=new TextDialog(mark.Text)){if(dialog.ShowDialog(this)==DialogResult.OK&&doc.EditText(mark,dialog.Value))Changed();}
-   canvas.Focus();canvas.Cursor=Cursors.Default;
+   StartTextEdit(selectedMark,false);
   }
   void DeleteSelected(){
    if(selectedMark==null)return;CancelInteraction();if(doc.Delete(selectedMark))Changed();canvas.Focus();canvas.Cursor=Cursors.Default;
   }
-  void History(bool forward){CancelInteraction();if(forward)doc.Redo();else doc.Undo();Changed();}
-  void Save(){if(moving||pending!=null)CommitInteraction();using(var dialog=new SaveFileDialog{Filter="PNG (*.png)|*.png|JPEG (*.jpg)|*.jpg|Bitmap (*.bmp)|*.bmp",FilterIndex=home.Prefs.Format=="jpg"?2:home.Prefs.Format=="bmp"?3:1,InitialDirectory=home.Prefs.Folder,FileName="MyShot-"+DateTime.Now.ToString("yyyyMMdd-HHmmss"),AddExtension=true,OverwritePrompt=true}){if(dialog.ShowDialog(this)!=DialogResult.OK)return;try{doc.Save(dialog.FileName);dirty=false;info.Text="Salvo: "+dialog.FileName;}catch(Exception e){UI.Error(this,e);}}}
-  void Copy(){if(moving||pending!=null)CommitInteraction();try{using(var bitmap=doc.Render(null)){var data=new DataObject();data.SetData(DataFormats.Bitmap,true,bitmap);Clipboard.SetDataObject(data,true,5,100);}copied=true;info.Text="Imagem copiada. Cole com Ctrl+V no aplicativo de destino.";}catch(Exception e){UI.Error(this,e);}}
+  void History(bool forward){if(textEditor!=null)textEditor.Confirm();CancelInteraction();if(forward)doc.Redo();else doc.Undo();Changed();}
+  void Save(){if(textEditor!=null)textEditor.Confirm();if(moving||pending!=null)CommitInteraction();using(var dialog=new SaveFileDialog{Filter="PNG (*.png)|*.png|JPEG (*.jpg)|*.jpg|Bitmap (*.bmp)|*.bmp",FilterIndex=home.Prefs.Format=="jpg"?2:home.Prefs.Format=="bmp"?3:1,InitialDirectory=home.Prefs.Folder,FileName="MyShot-"+DateTime.Now.ToString("yyyyMMdd-HHmmss"),AddExtension=true,OverwritePrompt=true}){if(dialog.ShowDialog(this)!=DialogResult.OK)return;try{doc.Save(dialog.FileName);dirty=false;info.Text="Salvo: "+dialog.FileName;}catch(Exception e){UI.Error(this,e);}}}
+  void Copy(){if(textEditor!=null)textEditor.Confirm();if(moving||pending!=null)CommitInteraction();try{using(var bitmap=doc.Render(null)){var data=new DataObject();data.SetData(DataFormats.Bitmap,true,bitmap);Clipboard.SetDataObject(data,true,5,100);}copied=true;info.Text="Imagem copiada. Cole com Ctrl+V no aplicativo de destino.";}catch(Exception e){UI.Error(this,e);}}
   protected override bool ProcessCmdKey(ref Message msg,Keys key){
+   if(textEditor!=null){if(key==Keys.Escape){textEditor.Cancel();return true;}if(key==(Keys.Control|Keys.Enter)){textEditor.Confirm();return true;}return base.ProcessCmdKey(ref msg,key);}
    if(key==(Keys.Control|Keys.S)){Save();return true;}if(key==(Keys.Control|Keys.C)){Copy();return true;}
    if(key==(Keys.Control|Keys.Z)){History(false);return true;}if(key==(Keys.Control|Keys.Y)||key==(Keys.Control|Keys.Shift|Keys.Z)){History(true);return true;}
    if(key==Keys.V&&!(ActiveControl is TextBoxBase)&&!(ActiveControl is UpDownBase)){SelectMove();return true;}
@@ -147,5 +148,54 @@ namespace MyShot {
    return base.ProcessCmdKey(ref msg,key);
   }
   protected override void Dispose(bool disposing){if(disposing){Theme.DisposeImages(this);doc.Dispose();if(canvas.Image!=null){canvas.Image.Dispose();canvas.Image=null;}}base.Dispose(disposing);}
+  // Edição de texto no lugar: a caixa e a barra flutuante ficam sobre a anotação, com preview ao vivo.
+  void StartTextEdit(Mark target,bool isNew){
+   CancelInteraction();
+   if(textEditor!=null)EndText();
+   textTarget=target;textIsNew=isNew;textSnapshot=target.Translated(Point.Empty);
+   if(isNew)pending=target;else{selectedMark=target;UpdateInspector();}
+   float scale=canvas.View.Width/(float)doc.Original.Width;
+   var style=new InlineTextEditor.Style{Text=target.Text,Color=target.Color,Family=target.FontFamily,Size=target.FontSize,Bold=target.Bold};
+   textEditor=new InlineTextEditor(style,scale,TextPreview,TextConfirmed,TextCancelled);
+   Controls.Add(textEditor);textEditor.BringToFront();
+   PlaceTextEditor();RefreshImage();
+   textEditor.Box.Focus();
+  }
+  void PlaceTextEditor(){
+   var view=canvas.View;float sx=view.Width/(float)doc.Original.Width,sy=view.Height/(float)doc.Original.Height;
+   RectangleF r=AnnotationGeometry.Bounds(textTarget);
+   int bar=Dip(40),width=Math.Max(300,(int)(r.Width*sx)+40),height=bar+Math.Max(64,(int)(r.Height*sy)+12);
+   int x=Math.Max(8,Math.Min(view.X+(int)(r.X*sx),ClientSize.Width-width-8));
+   int y=Math.Max(8,view.Y+(int)(r.Y*sy)-bar);
+   textEditor.SetScale(sx);
+   textEditor.Bounds=new Rectangle(x,y,width,height);
+  }
+  void ApplyStyle(InlineTextEditor.Style s){
+   textTarget.Text=s.Text;textTarget.Color=Color.FromArgb(textSnapshot.Color.A,s.Color);textTarget.FontFamily=s.Family;textTarget.FontSize=s.Size;textTarget.Bold=s.Bold;
+  }
+  void ApplySnapshot(){
+   textTarget.Text=textSnapshot.Text;textTarget.Color=textSnapshot.Color;textTarget.FontFamily=textSnapshot.FontFamily;textTarget.FontSize=textSnapshot.FontSize;textTarget.Bold=textSnapshot.Bold;
+  }
+  void TextPreview(InlineTextEditor.Style s){ApplyStyle(s);PlaceTextEditor();RefreshImage();}
+  void TextConfirmed(InlineTextEditor.Style s){
+   var target=textTarget;bool isNew=textIsNew;
+   if(isNew){
+    ApplyStyle(s);pending=null;EndText();doc.Add(target);Changed();
+   }else{
+    ApplySnapshot();
+    bool changed=doc.EditTextStyle(target,s.Text,Color.FromArgb(textSnapshot.Color.A,s.Color),s.Family,s.Size,s.Bold);
+    EndText();
+    if(changed)Changed();else RefreshImage();
+   }
+  }
+  void TextCancelled(){
+   if(textIsNew)pending=null;else ApplySnapshot();
+   EndText();RefreshImage();
+  }
+  void EndText(){
+   if(textEditor==null)return;
+   var editor=textEditor;textEditor=null;textTarget=null;textSnapshot=null;textIsNew=false;
+   Controls.Remove(editor);BeginInvoke(new Action(editor.Dispose));canvas.Focus();
+  }
  }
 }

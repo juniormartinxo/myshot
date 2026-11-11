@@ -15,13 +15,13 @@ namespace MyShot {
   static void ToolButton(Editor editor,string text){var button=StripButton(editor,text);if(button==null)throw new Exception("Tool not found: "+text);button.PerformClick();}
   static Point OnCanvas(Canvas canvas,Point pixel){var view=canvas.View;return new Point(view.X+(int)Math.Round(pixel.X*(double)view.Width/canvas.Image.Width),view.Y+(int)Math.Round(pixel.Y*(double)view.Height/canvas.Image.Height));}
   static T Find<T>(Control root,string text=null) where T:Control {foreach(Control child in root.Controls){if(child is T&&(text==null||child.Text==text))return (T)child;var nested=Find<T>(child,text);if(nested!=null)return nested;}return null;}
-  static void TextModal(Action open,Action<TextDialog> interact){
-   bool handled=false;Exception failure=null;
-   using(var timer=new System.Windows.Forms.Timer{Interval=50}){
-    timer.Tick+=(s,e)=>{TextDialog dialog=null;foreach(Form form in Application.OpenForms)if(form is TextDialog){dialog=(TextDialog)form;break;}if(dialog==null)return;timer.Stop();handled=true;try{interact(dialog);}catch(Exception ex){failure=ex;}finally{if(dialog.DialogResult==DialogResult.None){dialog.DialogResult=DialogResult.Cancel;dialog.Close();}}};
-    timer.Start();open();timer.Stop();
-   }
-   if(failure!=null)throw failure;Check(handled,"text dialog opened and responded through real modal event loop");
+  // Abre a edição inline da anotação e entrega a caixa ao teste (o editor é o último formulário aberto).
+  static void TextModal(Action open,Action<InlineTextEditor> interact){
+   open();
+   Editor editor=null;foreach(Form form in Application.OpenForms)if(form is Editor)editor=(Editor)form;
+   var inline=editor==null?null:Find<InlineTextEditor>(editor);
+   Check(inline!=null,"inline text editor opened");
+   interact(inline);
   }
   static void Editing(Bitmap source,string output){
    foreach(Tool tool in Enum.GetValues(typeof(Tool)))using(var doc=new Document(source)){
@@ -56,31 +56,32 @@ namespace MyShot {
      }
     }
     var shape=new Mark{Tool=Tool.Rectangle};doc.Add(shape);Check(!doc.EditText(shape,"invalid"),"text editing rejects shapes");doc.Undo();doc.Delete(mark);Check(!doc.CanRedo,"new deletion invalidates redo branch");
+    var styled=new Mark{Tool=Tool.Text,Text="a",A=new Point(5,5),Color=Color.Black,FontFamily="Segoe UI",FontSize=20};doc.Add(styled);Check(doc.EditTextStyle(styled,"b",Color.Red,"Arial",32,true)&&styled.Text=="b"&&styled.Color==Color.Red&&styled.FontFamily=="Arial"&&styled.FontSize==32&&styled.Bold,"text style (color, font, size, bold) is editable");doc.Undo();Check(styled.Text=="a"&&styled.Color==Color.Black&&styled.FontFamily=="Segoe UI"&&styled.FontSize==20&&!styled.Bold,"single undo restores the whole text style");doc.Undo();
    }
    using(var home=new Home())using(var editor=new Editor(source,home)){
     editor.Show();Application.DoEvents();ToolButton(editor,"Estilo");var canvas=Find<Canvas>(editor);
     var doc=(Document)typeof(Editor).GetField("doc",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).GetValue(editor);
     ToolButton(editor,"Texto");
-    TextModal(()=>Mouse(canvas,"Down",OnCanvas(canvas,new Point(100,100))),dialog=>{Find<TextBox>(dialog).Text="Texto original";Find<Button>(dialog,"Adicionar texto").PerformClick();});
+    TextModal(()=>Mouse(canvas,"Down",OnCanvas(canvas,new Point(100,100))),dialog=>{dialog.Box.Text="Texto original";dialog.Confirm();});
     Check(doc.Marks.Count==1,"text creation still works through dialog");var mark=doc.Marks[0];Point position=mark.A;
     Key(editor,Keys.V);Point hit=OnCanvas(canvas,new Point(110,110));Mouse(canvas,"Down",hit);Mouse(canvas,"Up",hit);
     var editButton=Find<Button>(editor,"Editar texto");Check(editButton.Visible&&Find<Button>(editor,"Excluir (Del)").Visible,"text selection exposes edit and delete actions");
     Mouse(canvas,"Down",hit);
     TextModal(()=>Mouse(canvas,"DoubleClick",hit),dialog=>{
      Check(dialog.Value=="Texto original"&&!canvas.Capture,"double click prefills text and releases mouse capture");
-     Find<TextBox>(dialog).Text="Texto editado\r\ncom duas linhas";Check(mark.Text=="Texto original","draft text does not mutate annotation before saving");
+     dialog.Box.Text="Texto editado\r\ncom duas linhas";Check(mark.Text=="Texto editado\r\ncom duas linhas","edits show live on the annotation while typing");
      using(var image=new Bitmap(dialog.Width,dialog.Height)){dialog.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(output,"text-edit-dialog.png"));}
-     Find<Button>(dialog,"Salvar texto").PerformClick();
+     dialog.Confirm();
     });Mouse(canvas,"Up",hit);
     Check(doc.Marks.Count==1&&mark.Text=="Texto editado\r\ncom duas linhas"&&mark.A==position,"double click edits in place without duplicate object or movement");
     Check(canvas.SelectedBounds.HasValue&&canvas.Focused,"editing preserves selection and returns keyboard focus to canvas");
     string path=Path.Combine(output,"edited-text-export.png");doc.Save(path);using(var saved=new Bitmap(path))Check(Same(saved,canvas.Image),"edited text export matches preview without selection decoration");
     Key(editor,Keys.Control|Keys.Z);Check(mark.Text=="Texto original","editor Ctrl+Z restores previous text");
-    TextModal(()=>editButton.PerformClick(),dialog=>{Find<TextBox>(dialog).Text="cancelar esta alteração";((Button)dialog.CancelButton).PerformClick();});
+    TextModal(()=>editButton.PerformClick(),dialog=>{dialog.Box.Text="cancelar esta alteração";dialog.Cancel();});
     Check(mark.Text=="Texto original"&&doc.CanRedo,"canceling text edit changes neither object nor redo history");
-    TextModal(()=>editButton.PerformClick(),dialog=>{Find<Button>(dialog,"Salvar texto").PerformClick();});
+    TextModal(()=>editButton.PerformClick(),dialog=>{dialog.Confirm();});
     Check(doc.CanRedo,"saving unchanged text preserves redo history");
-    TextModal(()=>editButton.PerformClick(),dialog=>{Find<TextBox>(dialog).Text=" \r\n ";Check(!Find<Button>(dialog,"Salvar texto").Enabled,"blank text disables save instead of deleting object");((Button)dialog.CancelButton).PerformClick();});
+    TextModal(()=>editButton.PerformClick(),dialog=>{dialog.Box.Text=" \r\n ";Check(!dialog.CanConfirm,"blank text disables save instead of deleting object");dialog.Cancel();});
     Key(editor,Keys.Control|Keys.Y);Check(mark.Text.StartsWith("Texto editado"),"editor redo restores edited text after canceled dialogs");
     editor.Size=editor.MinimumSize;Application.DoEvents();using(var image=new Bitmap(editor.Width,editor.Height)){editor.DrawToBitmap(image,new Rectangle(Point.Empty,image.Size));image.Save(Path.Combine(output,"editor-text-selected.png"));}
     using(var input=new TextBox{Text="123",Location=new Point(220,100)}){editor.Controls.Add(input);input.BringToFront();input.Focus();Key(editor,Keys.Delete);Check(doc.Marks.Count==1,"Delete does not remove annotation while a text input has focus");editor.Controls.Remove(input);}
@@ -106,9 +107,9 @@ namespace MyShot {
     ToolButton(editor,"Estilo");Check(Find<NumericUpDown>(editor).Visible,"style popover shows numeric inputs for the active tool");
     Key(editor,Keys.V);Point hit=OnCanvas(canvas,new Point(180,170));Mouse(canvas,"Down",hit);Mouse(canvas,"Up",hit);Check(canvas.SelectedBounds.HasValue,"object remains selectable after repeated panel layout changes");
     Find<Button>(editor,"Excluir (Del)").PerformClick();Check(doc.Marks.Count==0,"style popover deletes the selected object");Key(editor,Keys.Control|Keys.Z);Check(doc.Marks.Count==1,"collapsed-rail deletion can be undone");
-    ToolButton(editor,"Texto");TextModal(()=>Mouse(canvas,"Down",OnCanvas(canvas,new Point(350,80))),dialog=>{Find<TextBox>(dialog).Text="Texto";Find<Button>(dialog,"Adicionar texto").PerformClick();});Key(editor,Keys.V);
+    ToolButton(editor,"Texto");TextModal(()=>Mouse(canvas,"Down",OnCanvas(canvas,new Point(350,80))),dialog=>{dialog.Box.Text="Texto";dialog.Confirm();});Key(editor,Keys.V);
     hit=OnCanvas(canvas,new Point(360,90));Mouse(canvas,"Down",hit);Mouse(canvas,"Up",hit);
-    TextModal(()=>Find<Button>(editor,"Editar texto").PerformClick(),dialog=>{Find<TextBox>(dialog).Text="Texto atualizado";Find<Button>(dialog,"Salvar texto").PerformClick();});
+    TextModal(()=>Find<Button>(editor,"Editar texto").PerformClick(),dialog=>{dialog.Box.Text="Texto atualizado";dialog.Confirm();});
     Check(doc.Marks[1].Text=="Texto atualizado"&&canvas.SelectedBounds.HasValue,"collapsed property rail edits text while preserving selection");Snapshot(editor,output,"editor-panels-text-selected.png");
    }
   }
@@ -258,7 +259,6 @@ namespace MyShot {
      }
      using(var preview=new Bitmap(home.Bar.Width,home.Bar.Height)){home.Bar.DrawToBitmap(preview,new Rectangle(Point.Empty,preview.Size));preview.Save(Path.Combine(output,"home-window.png"));}
      using(var settings=new SettingsDialog(home.Prefs))using(var preview=new Bitmap(settings.Width,settings.Height)){settings.Show();Application.DoEvents();settings.DrawToBitmap(preview,new Rectangle(Point.Empty,preview.Size));preview.Save(Path.Combine(output,"settings-window.png"));}
-     using(var text=new TextDialog())using(var preview=new Bitmap(text.Width,text.Height)){text.Show();Application.DoEvents();text.DrawToBitmap(preview,new Rectangle(Point.Empty,preview.Size));preview.Save(Path.Combine(output,"text-window.png"));}
      Console.WriteLine("OBSERVED home/editor/settings DrawToBitmap completed; inspect PNGs for layout.");
     }
     try{using(var desktop=DesktopCapture.Take(SystemInformation.VirtualScreen)){desktop.Save(Path.Combine(output,"desktop.png"));Console.WriteLine("PASS desktop acquisition (not interactive workflow)");}}catch(Exception e){Console.WriteLine("BLOCKED desktop acquisition: "+e.GetType().Name+": "+e.Message);}

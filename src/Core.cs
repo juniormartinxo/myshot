@@ -68,6 +68,7 @@ namespace MyShot {
   internal string Text="";
   internal string FontFamily="Segoe UI";
   internal float FontSize=24;
+  internal bool Bold;
   internal int Number;
   internal Rectangle Rect { get { return Geometry.Between(A,B); } }
   internal Mark Translated(Point delta){var copy=(Mark)MemberwiseClone();copy.Points=new List<Point>(Points);copy.Translate(delta);return copy;}
@@ -103,9 +104,17 @@ namespace MyShot {
    int index=Marks.IndexOf(mark);if(index<0)return false;
    Marks.RemoveAt(index);Record(new Edit{Undo=()=>Marks.Insert(index,mark),Redo=()=>Marks.Remove(mark)});return true;
   }
-  internal bool EditText(Mark mark,string text){
-   if(!Marks.Contains(mark)||mark.Tool!=Tool.Text||String.IsNullOrWhiteSpace(text)||mark.Text==text)return false;
-   string previous=mark.Text;mark.Text=text;Record(new Edit{Undo=()=>mark.Text=previous,Redo=()=>mark.Text=text});return true;
+  internal bool EditText(Mark mark,string text){return EditTextStyle(mark,text,mark.Color,mark.FontFamily,mark.FontSize,mark.Bold);}
+  // Texto e estilo (cor, fonte, tamanho e negrito) mudam juntos e voltam com um único Desfazer.
+  internal bool EditTextStyle(Mark mark,string text,Color color,string family,float size,bool bold){
+   if(!Marks.Contains(mark)||mark.Tool!=Tool.Text||String.IsNullOrWhiteSpace(text))return false;
+   string previousText=mark.Text,previousFamily=mark.FontFamily;Color previousColor=mark.Color;float previousSize=mark.FontSize;bool previousBold=mark.Bold;
+   if(previousText==text&&previousColor==color&&previousFamily==family&&previousSize==size&&previousBold==bold)return false;
+   mark.Text=text;mark.Color=color;mark.FontFamily=family;mark.FontSize=size;mark.Bold=bold;
+   Record(new Edit{
+    Undo=()=>{mark.Text=previousText;mark.Color=previousColor;mark.FontFamily=previousFamily;mark.FontSize=previousSize;mark.Bold=previousBold;},
+    Redo=()=>{mark.Text=text;mark.Color=color;mark.FontFamily=family;mark.FontSize=size;mark.Bold=bold;}});
+   return true;
   }
   internal Mark HitTest(Point point,float tolerance){for(int i=Marks.Count-1;i>=0;i--)if(AnnotationGeometry.Hit(Marks[i],point,tolerance))return Marks[i];return null;}
   internal void Undo(){if(CanUndo){var edit=undo.Pop();edit.Undo();redo.Push(edit);}}
@@ -141,7 +150,7 @@ namespace MyShot {
      case Tool.Rectangle:if(r.Width>0&&r.Height>0){if(m.Filled)g.FillRectangle(brush,r);else g.DrawRectangle(pen,r);}break;
      case Tool.Ellipse:if(r.Width>0&&r.Height>0){if(m.Filled)g.FillEllipse(brush,r);else g.DrawEllipse(pen,r);}break;
      case Tool.Pencil:if(m.Points.Count>1)g.DrawLines(pen,m.Points.ToArray());else g.FillEllipse(brush,m.A.X-m.Width/2,m.A.Y-m.Width/2,m.Width,m.Width);break;
-     case Tool.Text:using(var font=new Font(m.FontFamily,m.FontSize,FontStyle.Regular,GraphicsUnit.Pixel))g.DrawString(m.Text,font,brush,m.A);break;
+     case Tool.Text:using(var font=new Font(m.FontFamily,m.FontSize,m.Bold?FontStyle.Bold:FontStyle.Regular,GraphicsUnit.Pixel))g.DrawString(m.Text,font,brush,m.A);break;
      case Tool.Step:
       float d=m.FontSize*1.7f;g.FillEllipse(brush,m.A.X-d/2,m.A.Y-d/2,d,d);
       using(var f=new Font(m.FontFamily,m.FontSize,FontStyle.Bold,GraphicsUnit.Pixel))using(var white=new SolidBrush(Color.FromArgb(m.Color.A,Color.White)))using(var fmt=new StringFormat()){fmt.Alignment=StringAlignment.Center;fmt.LineAlignment=StringAlignment.Center;g.DrawString(m.Number.ToString(),f,white,new RectangleF(m.A.X-d/2,m.A.Y-d/2,d,d),fmt);}break;

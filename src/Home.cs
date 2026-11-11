@@ -84,7 +84,7 @@ namespace MyShot {
       if(whole)selected=(Bitmap)desktop.Clone();
       else using(var selection=new Selection(desktop,bounds)){if(selection.ShowDialog()==DialogResult.OK)selected=desktop.Clone(selection.Selected,System.Drawing.Imaging.PixelFormat.Format32bppArgb);}
       if(selected==null)return;
-      if(Prefs.Sound)System.Media.SystemSounds.Asterisk.Play();
+      if(Prefs.Sound)CaptureSound.Play();
       if(direct){Directory.CreateDirectory(Prefs.Folder);string path=Path.Combine(Prefs.Folder,"MyShot-"+DateTime.Now.ToString("yyyyMMdd-HHmmss-fff")+"-"+Guid.NewGuid().ToString("N").Substring(0,6)+"."+Prefs.Format);ImageOutput.Save(selected,path);tray.ShowBalloonTip(2500,"Imagem salva",path,ToolTipIcon.Info);}
       else {var editor=new Editor(selected,this);opened=editor;editors.Add(editor);editor.FormClosed+=(s,e)=>editors.Remove(editor);editor.Show();}
      }finally{if(selected!=null)selected.Dispose();}
