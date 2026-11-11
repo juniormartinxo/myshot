@@ -29,7 +29,7 @@ namespace MyShot {
   [DataMember] public int Color = System.Drawing.Color.FromArgb(239,68,68).ToArgb();
   [DataMember] public int Thickness = 4;
   [DataMember] public int Opacity = 100;
-  [DataMember] public int FontSize = 24;
+  [DataMember] public int FontSize = 16;
   [DataMember] public string FontFamily = "Segoe UI";
   [DataMember] public bool Filled;
   internal static string PathName { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"MyShot","preferences.json"); } }
@@ -67,7 +67,7 @@ namespace MyShot {
   internal bool Filled;
   internal string Text="";
   internal string FontFamily="Segoe UI";
-  internal float FontSize=24;
+  internal float FontSize=16;
   internal bool Bold;
   internal int Number;
   internal Rectangle Rect { get { return Geometry.Between(A,B); } }
@@ -104,16 +104,20 @@ namespace MyShot {
    int index=Marks.IndexOf(mark);if(index<0)return false;
    Marks.RemoveAt(index);Record(new Edit{Undo=()=>Marks.Insert(index,mark),Redo=()=>Marks.Remove(mark)});return true;
   }
-  internal bool EditText(Mark mark,string text){return EditTextStyle(mark,text,mark.Color,mark.FontFamily,mark.FontSize,mark.Bold);}
-  // Texto e estilo (cor, fonte, tamanho e negrito) mudam juntos e voltam com um único Desfazer.
-  internal bool EditTextStyle(Mark mark,string text,Color color,string family,float size,bool bold){
+  internal bool EditText(Mark mark,string text){return EditTextStyle(mark,text,mark.Color,mark.FontFamily,mark.FontSize,mark.Bold,mark.A);}
+  // Texto, estilo (cor, fonte, tamanho, negrito) e posição mudam juntos e voltam com um único Desfazer.
+  internal bool EditTextStyle(Mark mark,string text,Color color,string family,float size,bool bold,Point origin){
    if(!Marks.Contains(mark)||mark.Tool!=Tool.Text||String.IsNullOrWhiteSpace(text))return false;
-   string previousText=mark.Text,previousFamily=mark.FontFamily;Color previousColor=mark.Color;float previousSize=mark.FontSize;bool previousBold=mark.Bold;
-   if(previousText==text&&previousColor==color&&previousFamily==family&&previousSize==size&&previousBold==bold)return false;
-   mark.Text=text;mark.Color=color;mark.FontFamily=family;mark.FontSize=size;mark.Bold=bold;
+   string previousText=mark.Text,previousFamily=mark.FontFamily;Color previousColor=mark.Color;float previousSize=mark.FontSize;bool previousBold=mark.Bold;Point previousOrigin=mark.A;
+   if(previousText==text&&previousColor==color&&previousFamily==family&&previousSize==size&&previousBold==bold&&previousOrigin==origin)return false;
+   Action<string,Color,string,float,bool,Point> apply=(t,c,f,s,b,o)=>{
+    mark.Text=t;mark.Color=c;mark.FontFamily=f;mark.FontSize=s;mark.Bold=b;
+    mark.Translate(new Point(o.X-mark.A.X,o.Y-mark.A.Y));
+   };
+   apply(text,color,family,size,bold,origin);
    Record(new Edit{
-    Undo=()=>{mark.Text=previousText;mark.Color=previousColor;mark.FontFamily=previousFamily;mark.FontSize=previousSize;mark.Bold=previousBold;},
-    Redo=()=>{mark.Text=text;mark.Color=color;mark.FontFamily=family;mark.FontSize=size;mark.Bold=bold;}});
+    Undo=()=>apply(previousText,previousColor,previousFamily,previousSize,previousBold,previousOrigin),
+    Redo=()=>apply(text,color,family,size,bold,origin)});
    return true;
   }
   internal Mark HitTest(Point point,float tolerance){for(int i=Marks.Count-1;i>=0;i--)if(AnnotationGeometry.Hit(Marks[i],point,tolerance))return Marks[i];return null;}

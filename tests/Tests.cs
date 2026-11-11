@@ -56,7 +56,7 @@ namespace MyShot {
      }
     }
     var shape=new Mark{Tool=Tool.Rectangle};doc.Add(shape);Check(!doc.EditText(shape,"invalid"),"text editing rejects shapes");doc.Undo();doc.Delete(mark);Check(!doc.CanRedo,"new deletion invalidates redo branch");
-    var styled=new Mark{Tool=Tool.Text,Text="a",A=new Point(5,5),Color=Color.Black,FontFamily="Segoe UI",FontSize=20};doc.Add(styled);Check(doc.EditTextStyle(styled,"b",Color.Red,"Arial",32,true)&&styled.Text=="b"&&styled.Color==Color.Red&&styled.FontFamily=="Arial"&&styled.FontSize==32&&styled.Bold,"text style (color, font, size, bold) is editable");doc.Undo();Check(styled.Text=="a"&&styled.Color==Color.Black&&styled.FontFamily=="Segoe UI"&&styled.FontSize==20&&!styled.Bold,"single undo restores the whole text style");doc.Undo();
+    var styled=new Mark{Tool=Tool.Text,Text="a",A=new Point(5,5),Color=Color.Black,FontFamily="Segoe UI",FontSize=20};doc.Add(styled);Check(doc.EditTextStyle(styled,"b",Color.Red,"Arial",32,true,styled.A)&&styled.Text=="b"&&styled.Color==Color.Red&&styled.FontFamily=="Arial"&&styled.FontSize==32&&styled.Bold,"text style (color, font, size, bold) is editable");doc.Undo();Check(styled.Text=="a"&&styled.Color==Color.Black&&styled.FontFamily=="Segoe UI"&&styled.FontSize==20&&!styled.Bold,"single undo restores the whole text style");doc.Undo();
    }
    using(var home=new Home())using(var editor=new Editor(source,home)){
     editor.Show();Application.DoEvents();ToolButton(editor,"Estilo");var canvas=Find<Canvas>(editor);
@@ -198,6 +198,7 @@ namespace MyShot {
   }
   [STAThread] static int Main(string[] args){
    string output=args.Length>0?args[0]:Path.GetFullPath("research/private/validation");Directory.CreateDirectory(output);
+   Home.Quiet=true;
    try{
     Native.SetProcessDpiAwarenessContext(new IntPtr(-4));Application.EnableVisualStyles();
     Check(Geometry.Between(new Point(300,200),new Point(20,30))==new Rectangle(20,30,280,170),"reverse drag bounds");

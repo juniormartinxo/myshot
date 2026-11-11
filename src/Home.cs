@@ -15,6 +15,8 @@ namespace MyShot {
   readonly ToolStripMenuItem updateItem;
   bool capturing;
   static string lastConflict;
+  // Testes ligam este modo para não criar notificações do Windows a cada execução.
+  internal static bool Quiet{get;set;}
   readonly List<Editor> editors=new List<Editor>();
 
   internal Home(bool startInTray=false) {
@@ -27,7 +29,7 @@ namespace MyShot {
    var menu=new ContextMenuStrip();menu.Items.Add("Capturar região",null,(s,e)=>BeginCapture(false,false));menu.Items.Add("Salvar desktop direto",null,(s,e)=>BeginCapture(true,true));menu.Items.Add("Abrir MyShot",null,(s,e)=>Restore());menu.Items.Add("Preferências",null,(s,e)=>{Restore();OpenSettings();});menu.Items.Add(new ToolStripSeparator());menu.Items.Add("Sair",null,(s,e)=>Exit());
    tray=new NotifyIcon{Text="MyShot · Captura de tela",Icon=Theme.AppIcon,ContextMenuStrip=menu,Visible=true};tray.DoubleClick+=(s,e)=>Restore();
    RegisterKeys();
-   if(warning!=null)tray.ShowBalloonTip(4000,"MyShot",warning,ToolTipIcon.Warning);
+   if(warning!=null&&!Quiet)tray.ShowBalloonTip(4000,"MyShot",warning,ToolTipIcon.Warning);
    if(!startInTray)Restore();
   }
 
@@ -54,7 +56,7 @@ namespace MyShot {
    // Balão só quando o conflito muda; a dica da barra continua sempre mostrando o estado.
    string conflict=(!a?capture+" ":"")+(!b?save:"");
    if(conflict.Length==0)lastConflict=null;
-   else if(conflict!=lastConflict){lastConflict=conflict;tray.ShowBalloonTip(4000,"MyShot","Atalho em uso: "+conflict.Trim()+". Altere em Preferências.",ToolTipIcon.Warning);}
+   else if(conflict!=lastConflict){lastConflict=conflict;if(!Quiet)tray.ShowBalloonTip(4000,"MyShot","Atalho em uso: "+conflict.Trim()+". Altere em Preferências.",ToolTipIcon.Warning);}
   }
 
   protected override void WndProc(ref Message m){if(m.Msg==0x0312){BeginCapture(m.WParam.ToInt32()==2,m.WParam.ToInt32()==2);return;}base.WndProc(ref m);}

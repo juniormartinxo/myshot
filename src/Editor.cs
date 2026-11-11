@@ -7,7 +7,7 @@ namespace MyShot {
  internal sealed class Editor : Form {
   readonly Document doc;readonly Home home;readonly Canvas canvas=new Canvas();
   readonly Label info=new Label{Dock=DockStyle.Bottom,Height=34,Padding=new Padding(16,8,0,0),Font=new Font("Segoe UI",9),ForeColor=Theme.Muted,BackColor=Theme.Surface,AutoEllipsis=true};
-  readonly ToolStrip toolbar=new ToolStrip{GripStyle=ToolStripGripStyle.Hidden,Dock=DockStyle.None,AutoSize=true,BackColor=Theme.Surface,Renderer=new ShotStripRenderer(),ImageScalingSize=new Size(Theme.IconSize,Theme.IconSize),Padding=new Padding(6),Font=new Font("Segoe UI",9)};
+  readonly ToolStrip toolbar=new ToolStrip{GripStyle=ToolStripGripStyle.Hidden,Dock=DockStyle.None,AutoSize=true,BackColor=Theme.Surface,Renderer=new ShotStripRenderer(),ImageScalingSize=new Size(Theme.BarIconSize,Theme.BarIconSize),Padding=new Padding(6),Font=new Font("Segoe UI",9)};
   readonly Panel popover=new Panel{Size=new Size(264,440),Visible=false,BackColor=Theme.Surface,Padding=new Padding(16,12,16,16),AutoScroll=true};
   readonly ToolStripButton undo,redo,moveButton,styleButton;
   readonly Label propertyTitle=Theme.Label("Seta",12.5f,true),propertyHint=Theme.Label("",9,false);
@@ -73,7 +73,7 @@ namespace MyShot {
    canvas.TopInset=toolbar.Bottom+Dip(12);
    canvas.Invalidate();
   }
-  ToolStripButton Add(string text,Action action){var b=new ToolStripButton(text){DisplayStyle=ToolStripItemDisplayStyle.Image,Padding=new Padding(7),Margin=new Padding(1,0,1,0),AccessibleName=text,ToolTipText=text};b.Click+=(s,e)=>action();toolbar.Items.Add(b);return b;}
+  ToolStripButton Add(string text,Action action){int pad=Dip(7),side=Theme.BarIconSize+2*pad;var b=new ToolStripButton(text){DisplayStyle=ToolStripItemDisplayStyle.Image,AutoSize=false,Size=new Size(side,side),Padding=new Padding(pad),ImageAlign=ContentAlignment.MiddleCenter,Margin=new Padding(1,0,1,0),AccessibleName=text,ToolTipText=text};b.Click+=(s,e)=>action();toolbar.Items.Add(b);return b;}
   NumericUpDown AddNumber(TableLayoutPanel panel,string text,int min,int max,int value,Action<int> set){var label=Theme.Label(text,9,true);panel.Controls.Add(label);var n=new NumericUpDown{Minimum=min,Maximum=max,Value=value,Dock=DockStyle.Top,Margin=new Padding(0,6,0,18),BorderStyle=BorderStyle.FixedSingle,BackColor=Theme.Surface,ForeColor=Theme.Ink,AccessibleName=text,Tag=label};n.ValueChanged+=(s,e)=>{set((int)n.Value);Store();};panel.Controls.Add(n);return n;}
   void Store(){try{home.Persist();}catch(Exception e){info.Text="Preferências não salvas: "+e.Message;}}
   void ToggleStyle(){popover.Visible=!popover.Visible;styleButton.Checked=popover.Visible;if(popover.Visible)popover.BringToFront();else canvas.Focus();}
@@ -157,16 +157,17 @@ namespace MyShot {
    float scale=canvas.View.Width/(float)doc.Original.Width;
    var style=new InlineTextEditor.Style{Text=target.Text,Color=target.Color,Family=target.FontFamily,Size=target.FontSize,Bold=target.Bold};
    textEditor=new InlineTextEditor(style,scale,TextPreview,TextConfirmed,TextCancelled);
-   Controls.Add(textEditor);textEditor.BringToFront();
+   textEditor.DragBegin=BeginTextDrag;textEditor.DragTo=TextDragTo;
+   canvas.Controls.Add(textEditor);textEditor.BringToFront();
    PlaceTextEditor();RefreshImage();
    textEditor.Box.Focus();
   }
   void PlaceTextEditor(){
    var view=canvas.View;float sx=view.Width/(float)doc.Original.Width,sy=view.Height/(float)doc.Original.Height;
    RectangleF r=AnnotationGeometry.Bounds(textTarget);
-   int bar=Dip(40),width=Math.Max(300,(int)(r.Width*sx)+40),height=bar+Math.Max(64,(int)(r.Height*sy)+12);
+   int width=Math.Max(Math.Max(300,(int)(r.Width*sx)+40),textEditor.BarWidth+8),height=textEditor.InputTop+Math.Max(64,(int)(r.Height*sy)+12);
    int x=Math.Max(8,Math.Min(view.X+(int)(r.X*sx),ClientSize.Width-width-8));
-   int y=Math.Max(8,view.Y+(int)(r.Y*sy)-bar);
+   int y=Math.Max(8,view.Y+(int)(r.Y*sy)-textEditor.InputTop);
    textEditor.SetScale(sx);
    textEditor.Bounds=new Rectangle(x,y,width,height);
   }
@@ -174,16 +175,26 @@ namespace MyShot {
    textTarget.Text=s.Text;textTarget.Color=Color.FromArgb(textSnapshot.Color.A,s.Color);textTarget.FontFamily=s.Family;textTarget.FontSize=s.Size;textTarget.Bold=s.Bold;
   }
   void ApplySnapshot(){
+   textTarget.Translate(new Point(textSnapshot.A.X-textTarget.A.X,textSnapshot.A.Y-textTarget.A.Y));
    textTarget.Text=textSnapshot.Text;textTarget.Color=textSnapshot.Color;textTarget.FontFamily=textSnapshot.FontFamily;textTarget.FontSize=textSnapshot.FontSize;textTarget.Bold=textSnapshot.Bold;
   }
   void TextPreview(InlineTextEditor.Style s){ApplyStyle(s);PlaceTextEditor();RefreshImage();}
+  // Alça de arrasto da barra: move o texto ao vivo, na proporção da tela.
+  Point textDragStart,textDragOrigin;
+  void BeginTextDrag(){textDragStart=System.Windows.Forms.Cursor.Position;textDragOrigin=textTarget.A;}
+  void TextDragTo(Point screen){
+   float scale=canvas.View.Width/(float)doc.Original.Width;
+   var origin=new Point(textDragOrigin.X+(int)Math.Round((screen.X-textDragStart.X)/scale),textDragOrigin.Y+(int)Math.Round((screen.Y-textDragStart.Y)/scale));
+   textTarget.Translate(new Point(origin.X-textTarget.A.X,origin.Y-textTarget.A.Y));
+   PlaceTextEditor();RefreshImage();
+  }
   void TextConfirmed(InlineTextEditor.Style s){
    var target=textTarget;bool isNew=textIsNew;
    if(isNew){
     ApplyStyle(s);pending=null;EndText();doc.Add(target);Changed();
    }else{
-    ApplySnapshot();
-    bool changed=doc.EditTextStyle(target,s.Text,Color.FromArgb(textSnapshot.Color.A,s.Color),s.Family,s.Size,s.Bold);
+    var origin=target.A;ApplySnapshot();
+    bool changed=doc.EditTextStyle(target,s.Text,Color.FromArgb(textSnapshot.Color.A,s.Color),s.Family,s.Size,s.Bold,origin);
     EndText();
     if(changed)Changed();else RefreshImage();
    }
@@ -195,7 +206,7 @@ namespace MyShot {
   void EndText(){
    if(textEditor==null)return;
    var editor=textEditor;textEditor=null;textTarget=null;textSnapshot=null;textIsNew=false;
-   Controls.Remove(editor);BeginInvoke(new Action(editor.Dispose));canvas.Focus();
+   canvas.Controls.Remove(editor);BeginInvoke(new Action(editor.Dispose));canvas.Focus();
   }
  }
 }
