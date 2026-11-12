@@ -79,6 +79,8 @@ namespace MyShot {
    if(visible)bar.Present();
   }
 
+  internal void ShowHelp(){using(var help=new HelpWindow())help.ShowDialog(DialogOwner());}
+
   internal void OpenSettings(){
    // Enquanto houver uma janela de edição aberta, as Preferências não abrem (a troca de tema recria a barra).
    if(editors.Count>0){MessageBox.Show(DialogOwner(),"Feche as janelas de edição antes de abrir as Preferências.","MyShot",MessageBoxButtons.OK,MessageBoxIcon.Information);return;}
