@@ -319,6 +319,13 @@ namespace MyShot {
     Check(new Preferences().LastRegion==null&&new Preferences{RegionWidth=1,RegionHeight=50}.LastRegion==null,"no last region unless width and height are at least 2");
     p.SetLastRegion(new Rectangle(-1280,40,800,600));p.Save(prefPath);loaded=Preferences.Load(prefPath,out warning);
     Check(warning==null&&loaded.LastRegion==new Rectangle(-1280,40,800,600),"last region persists across restarts");
+    using(var source=new Bitmap(100,100,System.Drawing.Imaging.PixelFormat.Format32bppArgb)){
+     using(var sg=Graphics.FromImage(source))sg.Clear(Color.Red);
+     using(var cut=PolygonCapture.Crop(source,new[]{new Point(10,10),new Point(60,10),new Point(10,60)})){
+      Check(cut!=null&&cut.Width==51&&cut.Height==51&&cut.GetPixel(5,5).A==255&&cut.GetPixel(50,50).A==0,"free-form capture keeps the polygon and makes the outside transparent");
+     }
+     using(var none=PolygonCapture.Crop(source,new[]{new Point(1,1),new Point(1,1),new Point(1,1)}))Check(none==null,"degenerate free-form selection is rejected");
+    }
     Check(Preferences.ModifierText(Preferences.ModCtrl|Preferences.ModWin)=="Ctrl+Win"&&new Preferences{Modifiers=Preferences.ModAlt|Preferences.ModShift}.HotkeyModifiers==(Preferences.ModAlt|Preferences.ModShift)&&new Preferences().HotkeyModifiers==(Preferences.ModCtrl|Preferences.ModAlt),"hotkey modifiers accept any combination and keep the old default");
     File.WriteAllText(prefPath,"corrupt");loaded=Preferences.Load(prefPath,out warning);Check(warning!=null&&loaded.Format=="png","corrupt preferences fall back with warning");
     Check(WindowsStartup.Command(@"C:\Pasta com espaço\ação\MyShot.exe")=="\"C:\\Pasta com espaço\\ação\\MyShot.exe\" --startup","startup command quotes spaces and Unicode correctly");

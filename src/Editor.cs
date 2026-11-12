@@ -21,6 +21,8 @@ namespace MyShot {
   Mark polygon;
   Tool selectedTool=Tool.Arrow;Mark pending,selectedMark,movePreview;Point moveStart;bool moving,moveMode,dirty=true;bool copied;
 
+  // Captura de área livre tem transparência: o salvamento oferece só PNG, porque JPG e BMP não guardam transparência.
+  internal bool KeepsTransparency;
   internal Editor(Bitmap source,Home owner) {
    home=owner;doc=new Document(source);UI.Style(this);Text="MyShot · Editor";ClientSize=new Size(1200,760);MinimumSize=new Size(940,560);
 
@@ -149,7 +151,7 @@ namespace MyShot {
    if(selectedMark==null)return;CancelInteraction();if(doc.Delete(selectedMark))Changed();canvas.Focus();canvas.Cursor=Cursors.Default;
   }
   void History(bool forward){if(textEditor!=null)textEditor.Confirm();CancelInteraction();if(forward)doc.Redo();else doc.Undo();Changed();}
-  void Save(){if(textEditor!=null)textEditor.Confirm();if(moving||pending!=null)CommitInteraction();using(var dialog=new SaveFileDialog{Filter="PNG (*.png)|*.png|JPEG (*.jpg)|*.jpg|Bitmap (*.bmp)|*.bmp",FilterIndex=home.Prefs.Format=="jpg"?2:home.Prefs.Format=="bmp"?3:1,InitialDirectory=home.Prefs.Folder,FileName="MyShot-"+DateTime.Now.ToString("yyyyMMdd-HHmmss"),AddExtension=true,OverwritePrompt=true}){if(dialog.ShowDialog(this)!=DialogResult.OK)return;try{doc.Save(dialog.FileName);dirty=false;info.Text="Salvo: "+dialog.FileName;}catch(Exception e){UI.Error(this,e);}}}
+  void Save(){if(textEditor!=null)textEditor.Confirm();if(moving||pending!=null)CommitInteraction();using(var dialog=new SaveFileDialog{Filter=KeepsTransparency?"PNG (*.png)|*.png":"PNG (*.png)|*.png|JPEG (*.jpg)|*.jpg|Bitmap (*.bmp)|*.bmp",FilterIndex=KeepsTransparency?1:home.Prefs.Format=="jpg"?2:home.Prefs.Format=="bmp"?3:1,InitialDirectory=home.Prefs.Folder,FileName="MyShot-"+DateTime.Now.ToString("yyyyMMdd-HHmmss"),AddExtension=true,OverwritePrompt=true}){if(dialog.ShowDialog(this)!=DialogResult.OK)return;try{doc.Save(dialog.FileName);dirty=false;info.Text="Salvo: "+dialog.FileName;}catch(Exception e){UI.Error(this,e);}}}
   void Copy(){if(textEditor!=null)textEditor.Confirm();if(moving||pending!=null)CommitInteraction();try{using(var bitmap=doc.Render(null)){var data=new DataObject();data.SetData(DataFormats.Bitmap,true,bitmap);Clipboard.SetDataObject(data,true,5,100);}copied=true;info.Text="Imagem copiada. Cole com Ctrl+V no aplicativo de destino.";}catch(Exception e){UI.Error(this,e);}}
   protected override bool ProcessCmdKey(ref Message msg,Keys key){
    if(polygon!=null){if(key==Keys.Enter){FinishPolygon();return true;}if(key==Keys.Escape){CancelPolygon();return true;}}

@@ -25,6 +25,7 @@ namespace MyShot {
   [DataMember] public string Appearance = "dark";
   [DataMember] public int CaptureKey = (int)Keys.S;
   [DataMember] public int FileKey = (int)Keys.F;
+  [DataMember] public int FreeKey = (int)Keys.A;
   [DataMember] public bool ShiftInsteadOfAlt {get;set;}
   // Modificadores do atalho em bits (Alt=1, Ctrl=2, Shift=4, Win=8). Zero = arquivo antigo: usa ShiftInsteadOfAlt.
   [DataMember] public int Modifiers;
@@ -58,6 +59,7 @@ namespace MyShot {
      if(String.IsNullOrWhiteSpace(p.FontFamily))p.FontFamily="Segoe UI";
      if(p.CaptureKey<65||p.CaptureKey>90)p.CaptureKey=83;
      if(p.FileKey<65||p.FileKey>90)p.FileKey=70;
+     if(p.FreeKey<65||p.FreeKey>90)p.FreeKey=65;
      return p;
     }
    }catch(Exception e) { warning="Preferências não carregadas: "+e.Message; return new Preferences(); }

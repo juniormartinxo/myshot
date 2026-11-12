@@ -9,7 +9,7 @@ namespace MyShot {
   readonly Home home;
   readonly ToolStrip strip=new ToolStrip{GripStyle=ToolStripGripStyle.Hidden,Dock=DockStyle.Fill,BackColor=Theme.Surface,Renderer=new ShotStripRenderer(),ImageScalingSize=new Size(Theme.BarIconSize,Theme.BarIconSize),Padding=new Padding(24,4,24,12)};
   readonly DragGrip grip;
-  readonly ToolStripButton region,desktop,direct;
+  readonly ToolStripButton region,freeform,desktop,direct;
 
   internal CaptureBar(Home owner){
    home=owner;UI.Style(this);
@@ -18,11 +18,12 @@ namespace MyShot {
    TopMost=true;
    // Vidro escuro: a janela inteira fica semitransparente, sem cantos arredondados.
    region=Add("Capturar região",()=>home.BeginCapture(false,false));region.Tag="primary";region.Image=Theme.Icon("capture",Theme.OnAccent);
-   desktop=Add("Desktop inteiro",()=>home.BeginCapture(false,true));desktop.Image=Theme.Icon("desktop",Theme.Ink);
+   freeform=Add("Área livre",()=>home.BeginCapture(false,false,false,true));freeform.Image=Theme.Icon("Polygon",Theme.Ink);freeform.ToolTipText="Capturar área livre: marque os cantos de um polígono";
+   desktop=Add("Desktop inteiro",()=>home.BeginCapture(false,true));desktop.Image=Theme.Icon("desktop",Theme.Ink);desktop.ToolTipText="Capturar o desktop inteiro, com todas as telas";
    direct=Add("Salvar desktop direto",()=>home.BeginCapture(true,true));direct.Image=Theme.Icon("save",Theme.Ink);
    strip.Items.Add(new ToolStripSeparator());
-   var prefs=Add("Preferências",()=>home.OpenSettings());prefs.Image=Theme.Icon("style",Theme.Ink);
-   var more=Add("Mais opções",()=>home.ShowMoreMenu());more.Image=Theme.Icon("more",Theme.Ink);
+   var prefs=Add("Preferências",()=>home.OpenSettings());prefs.Image=Theme.Icon("style",Theme.Ink);prefs.ToolTipText="Preferências: pasta, formato, atalhos e aparência";
+   var more=Add("Mais opções",()=>home.ShowMoreMenu());more.Image=Theme.Icon("more",Theme.Ink);more.ToolTipText="Mais opções: atualizar o MyShot e outras ações";
    var close=Add("Fechar barra (o MyShot continua na bandeja)",()=>Hide());close.Image=Theme.Icon("close",Theme.Ink);
    // Alça de arrasto embaixo da barra; o fundo dos botões também arrasta, sem cursor de movimento sobre a barra inteira.
    grip=new DragGrip(StartDrag){Dock=DockStyle.Bottom,Height=Dip(24)};
@@ -62,9 +63,10 @@ namespace MyShot {
   }
 
   // Tooltips trazem o atalho; quando um atalho está em uso, a dica informa e aponta as Preferências.
-  internal void SetShortcuts(string capture,string save,bool captureOk,bool saveOk){
+  internal void SetShortcuts(string capture,string save,bool captureOk,bool saveOk,string free,bool freeOk){
    region.ToolTipText=captureOk?"Capturar região ("+capture+")":"Atalho "+capture+" em uso. Altere em Preferências";
    direct.ToolTipText=saveOk?"Salvar desktop direto ("+save+")":"Atalho "+save+" em uso. Altere em Preferências";
+   freeform.ToolTipText=freeOk?"Capturar área livre ("+free+"): marque os cantos de um polígono":"Atalho "+free+" em uso. Altere em Preferências";
   }
 
   // Primeira abertura: centralizada no topo. Depois, reabre onde o usuário a deixou, mantida dentro da área de trabalho.
