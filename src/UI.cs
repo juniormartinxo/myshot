@@ -38,9 +38,11 @@ namespace MyShot {
  }
  internal sealed class Selection : Form {
   readonly Bitmap desktop;Point origin,current;bool dragging;
+  // Última região (em coordenadas do desktop): aparece destacada e Enter a confirma sem arrastar de novo.
+  readonly Rectangle? previous;
   internal Rectangle Selected;
-  internal Selection(Bitmap image,Rectangle bounds) {
-   desktop=image;AutoScaleMode=AutoScaleMode.None;FormBorderStyle=FormBorderStyle.None;StartPosition=FormStartPosition.Manual;MaximumSize=bounds.Size;MinimumSize=bounds.Size;Bounds=bounds;TopMost=true;ShowInTaskbar=false;Cursor=Cursors.Cross;DoubleBuffered=true;KeyPreview=true;
+  internal Selection(Bitmap image,Rectangle bounds,Rectangle? remembered) {
+   desktop=image;previous=remembered;AutoScaleMode=AutoScaleMode.None;FormBorderStyle=FormBorderStyle.None;StartPosition=FormStartPosition.Manual;MaximumSize=bounds.Size;MinimumSize=bounds.Size;Bounds=bounds;TopMost=true;ShowInTaskbar=false;Cursor=Cursors.Cross;DoubleBuffered=true;KeyPreview=true;
    Shown+=(s,e)=>{Bounds=bounds;Activate();Native.SetForegroundWindow(Handle);};
   }
   protected override void OnPaint(PaintEventArgs e){
@@ -51,7 +53,8 @@ namespace MyShot {
    if(!dragging)using(var guide=new Pen(Color.FromArgb(120,Color.White),1)){e.Graphics.DrawLine(guide,0,mouse.Y,ClientSize.Width,mouse.Y);e.Graphics.DrawLine(guide,mouse.X,0,mouse.X,ClientSize.Height);}
    var r=Geometry.Between(origin,current);
    if(dragging&&r.Width>0&&r.Height>0){e.Graphics.DrawImage(desktop,r,r,GraphicsUnit.Pixel);using(var pen=new Pen(Color.White,1))e.Graphics.DrawRectangle(pen,r);}
-   string label=dragging?r.Width+" × "+r.Height+" px   ·   Esc cancela":"Arraste para selecionar uma região   ·   Esc cancela";
+   else if(!dragging&&previous.HasValue){var p=previous.Value;e.Graphics.DrawImage(desktop,p,p,GraphicsUnit.Pixel);using(var pen=new Pen(Theme.Accent,2)){pen.DashStyle=DashStyle.Dash;e.Graphics.DrawRectangle(pen,p);}}
+   string label=dragging?r.Width+" × "+r.Height+" px   ·   Esc cancela":previous.HasValue?"Enter: última região   ·   Arraste: nova   ·   Esc cancela":"Arraste para selecionar uma região   ·   Esc cancela";
    int x=Math.Max(8,Math.Min(ClientSize.Width-380,mouse.X+18)),y=Math.Max(8,Math.Min(ClientSize.Height-42,mouse.Y+22));
    e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;using(var bg=new SolidBrush(Color.FromArgb(235,Theme.Canvas)))using(var shape=Theme.Round(new RectangleF(x,y,370,32),6))e.Graphics.FillPath(bg,shape);
    TextRenderer.DrawText(e.Graphics,label,SystemFonts.MessageBoxFont,new Point(x+10,y+9),Theme.Ink);
@@ -59,7 +62,7 @@ namespace MyShot {
   protected override void OnMouseDown(MouseEventArgs e){if(e.Button==MouseButtons.Right){DialogResult=DialogResult.Cancel;Close();}if(e.Button!=MouseButtons.Left)return;origin=current=e.Location;dragging=true;Capture=true;Invalidate();}
   protected override void OnMouseMove(MouseEventArgs e){if(dragging)current=new Point(Math.Max(0,Math.Min(ClientSize.Width,e.X)),Math.Max(0,Math.Min(ClientSize.Height,e.Y)));Invalidate();}
   protected override void OnMouseUp(MouseEventArgs e){if(!dragging||e.Button!=MouseButtons.Left)return;Capture=false;Selected=Rectangle.Intersect(new Rectangle(Point.Empty,desktop.Size),Geometry.Between(origin,current));if(Selected.Width<2||Selected.Height<2){dragging=false;Invalidate();return;}DialogResult=DialogResult.OK;Close();}
-  protected override bool ProcessCmdKey(ref Message msg,Keys key){if(key==Keys.Escape){DialogResult=DialogResult.Cancel;Close();return true;}return base.ProcessCmdKey(ref msg,key);}
+  protected override bool ProcessCmdKey(ref Message msg,Keys key){if(key==Keys.Escape){DialogResult=DialogResult.Cancel;Close();return true;}if(key==Keys.Enter&&previous.HasValue&&!dragging){Selected=previous.Value;DialogResult=DialogResult.OK;Close();return true;}return base.ProcessCmdKey(ref msg,key);}
   protected override void WndProc(ref Message m){if(m.Msg==0x02E0)return;base.WndProc(ref m);}
  }
  internal sealed class Canvas : Control {
@@ -83,8 +86,8 @@ namespace MyShot {
   internal void ApplyStartup(){if(!canConfigureStartup)return;if(startWithWindows.Checked){if(!String.Equals(initialStartupCommand,WindowsStartup.Command(Application.ExecutablePath),StringComparison.Ordinal))startup.SetEnabled(true);}else if(!String.IsNullOrWhiteSpace(initialStartupCommand))startup.SetEnabled(false);}
   internal SettingsDialog(Preferences current){
    UI.Style(this);Text="MyShot · Preferências";ClientSize=new Size(640,668);FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;MinimizeBox=false;
-   var panel=new TableLayoutPanel{Dock=DockStyle.Fill,Padding=new Padding(28),ColumnCount=2,RowCount=14};panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,168));panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
-   foreach(int height in new[]{42,48,40,8,42,42,40,44,44,40,32,52,24,52})panel.RowStyles.Add(new RowStyle(SizeType.Absolute,height));
+   var panel=new TableLayoutPanel{Dock=DockStyle.Fill,Padding=new Padding(28),ColumnCount=2,RowCount=15};panel.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,168));panel.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
+   foreach(int height in new[]{42,48,40,8,42,42,40,44,44,44,40,32,52,24,52})panel.RowStyles.Add(new RowStyle(SizeType.Absolute,height));
    var title=Theme.Label("Preferências",20,true);panel.Controls.Add(title,0,0);panel.SetColumnSpan(title,2);
    var subtitle=Theme.Label("Defina onde salvar e como iniciar suas capturas.",10,false);panel.Controls.Add(subtitle,0,1);panel.SetColumnSpan(subtitle,2);
    var folder=new TextBox{Text=current.Folder,AccessibleName="Pasta de saída"};var browse=(ActionButton)UI.Button("",()=>{using(var d=new FolderBrowserDialog{SelectedPath=folder.Text})if(d.ShowDialog(this)==DialogResult.OK)folder.Text=d.SelectedPath;},false);browse.Icon="folder";browse.AccessibleName="Escolher pasta";browse.AutoSize=false;browse.MinimumSize=new Size(40,40);browse.Size=new Size(40,40);browse.Margin=new Padding(8,0,0,8);
@@ -93,7 +96,7 @@ namespace MyShot {
    var modRow=new FlowLayoutPanel{AutoSize=true,WrapContents=false,Margin=Padding.Empty};var modBoxes=new ToggleBox[4];
    for(int i=0;i<4;i++){modBoxes[i]=new ToggleBox{Text=modNames[i],AccessibleName="Modificador "+modNames[i],Checked=(current.HotkeyModifiers&modFlags[i])!=0,Margin=new Padding(0,0,14,0)};modRow.Controls.Add(modBoxes[i]);}
    Func<int> selectedMods=()=>{int m=0;for(int i=0;i<4;i++)if(modBoxes[i].Checked)m|=modFlags[i];return m;};
-   var capture=new ChoiceBox();var file=new ChoiceBox();for(char c='A';c<='Z';c++){capture.Items.Add(c.ToString());file.Items.Add(c.ToString());}capture.SelectedItem=((char)current.CaptureKey).ToString();file.SelectedItem=((char)current.FileKey).ToString();
+   var capture=new ChoiceBox();var file=new ChoiceBox();var freeKey=new ChoiceBox();for(char c='A';c<='Z';c++){capture.Items.Add(c.ToString());file.Items.Add(c.ToString());freeKey.Items.Add(c.ToString());}freeKey.SelectedItem=((char)current.FreeKey).ToString();capture.SelectedItem=((char)current.CaptureKey).ToString();file.SelectedItem=((char)current.FileKey).ToString();
    var sound=new ToggleBox{Text="Reproduzir som após capturar",Checked=current.Sound,AutoSize=true};
    var barOpacity=new NumberField{Minimum=30,Maximum=100,Value=current.BarOpacity,Width=64,AccessibleName="Opacidade da barra"};
    var soundRow=new FlowLayoutPanel{AutoSize=true,WrapContents=false,Margin=Padding.Empty};soundRow.Controls.Add(sound);var barLabel=Theme.Label("Opacidade (%)",9,true);barLabel.Margin=new Padding(16,6,6,0);soundRow.Controls.Add(barLabel);soundRow.Controls.Add(barOpacity);
@@ -101,21 +104,22 @@ namespace MyShot {
    var appearanceLabel=Theme.Label("Aparência",10,true);appearanceLabel.Margin=new Padding(28,8,8,0);var formatRow=new FlowLayoutPanel{Dock=DockStyle.Fill,WrapContents=false,Margin=Padding.Empty};formatRow.Controls.Add(format);formatRow.Controls.Add(appearanceLabel);formatRow.Controls.Add(appearance);
    panel.Controls.Add(Theme.Label("Formato",10,true),0,4);panel.Controls.Add(formatRow,1,4);
    var section=Theme.Label("Atalhos globais",12.5f,true);section.Margin=new Padding(0,8,0,0);panel.Controls.Add(section,0,5);panel.SetColumnSpan(section,2);panel.Controls.Add(modRow,1,6);
-   var capturePrefix=Theme.Label(Preferences.ModifierText(current.HotkeyModifiers)+"+",10,false);var filePrefix=Theme.Label(Preferences.ModifierText(current.HotkeyModifiers)+"+",10,false);Action update=()=>{capturePrefix.Text=filePrefix.Text=Preferences.ModifierText(selectedMods())+"+";};foreach(var box in modBoxes)box.CheckedChanged+=(s,e)=>update();update();
-   capture.Width=file.Width=72;capture.AccessibleName="Letra do atalho de capturar região";file.AccessibleName="Letra do atalho de salvar desktop";
+   var capturePrefix=Theme.Label(Preferences.ModifierText(current.HotkeyModifiers)+"+",10,false);var filePrefix=Theme.Label(Preferences.ModifierText(current.HotkeyModifiers)+"+",10,false);var freePrefix=Theme.Label(Preferences.ModifierText(current.HotkeyModifiers)+"+",10,false);Action update=()=>{capturePrefix.Text=filePrefix.Text=freePrefix.Text=Preferences.ModifierText(selectedMods())+"+";};foreach(var box in modBoxes)box.CheckedChanged+=(s,e)=>update();update();
+   capture.Width=file.Width=freeKey.Width=72;capture.AccessibleName="Letra do atalho de capturar região";file.AccessibleName="Letra do atalho de salvar desktop";freeKey.AccessibleName="Letra do atalho de área livre";
    var captureKeys=new FlowLayoutPanel{Dock=DockStyle.Fill};capturePrefix.Margin=new Padding(0,6,8,0);captureKeys.Controls.Add(capturePrefix);captureKeys.Controls.Add(capture);var fileKeys=new FlowLayoutPanel{Dock=DockStyle.Fill};filePrefix.Margin=new Padding(0,6,8,0);fileKeys.Controls.Add(filePrefix);fileKeys.Controls.Add(file);
-   panel.Controls.Add(Theme.Label("Capturar região",10,true),0,7);panel.Controls.Add(captureKeys,1,7);panel.Controls.Add(Theme.Label("Salvar desktop",10,true),0,8);panel.Controls.Add(fileKeys,1,8);panel.Controls.Add(soundRow,1,9);
+   panel.Controls.Add(Theme.Label("Capturar região",10,true),0,7);panel.Controls.Add(captureKeys,1,7);var freeKeys=new FlowLayoutPanel{Dock=DockStyle.Fill};freePrefix.Margin=new Padding(0,6,8,0);freeKeys.Controls.Add(freePrefix);freeKeys.Controls.Add(freeKey);
+   panel.Controls.Add(Theme.Label("Salvar desktop",10,true),0,8);panel.Controls.Add(fileKeys,1,8);panel.Controls.Add(Theme.Label("Área livre",10,true),0,9);panel.Controls.Add(freeKeys,1,9);panel.Controls.Add(soundRow,1,10);
    var startupHint=Theme.Label("Abre na bandeja ao entrar na sua conta.",9,false);startupHint.AutoSize=false;startupHint.Dock=DockStyle.Fill;
    try{initialStartupCommand=startup.RegisteredCommand();startWithWindows.Checked=!String.IsNullOrWhiteSpace(initialStartupCommand);canConfigureStartup=true;}catch(Exception){startWithWindows.Enabled=false;startupHint.Text="Não foi possível consultar a inicialização nesta sessão.";startupHint.ForeColor=Theme.WarningInk;}
-   panel.Controls.Add(Theme.Label("Inicialização",10,true),0,10);panel.Controls.Add(startWithWindows,1,10);panel.Controls.Add(startupHint,1,11);
+   panel.Controls.Add(Theme.Label("Inicialização",10,true),0,11);panel.Controls.Add(startWithWindows,1,11);panel.Controls.Add(startupHint,1,12);
    var save=UI.Button("Salvar preferências",()=>{
     if(selectedMods()==0){MessageBox.Show(this,"Escolha pelo menos um modificador (Ctrl, Alt, Shift ou Win).");return;}
-    if(!Path.IsPathRooted(folder.Text)||capture.SelectedItem==null||file.SelectedItem==null){MessageBox.Show(this,"Informe uma pasta absoluta e os atalhos.");return;}
-    if(capture.SelectedItem.ToString()==file.SelectedItem.ToString()){MessageBox.Show(this,"Os dois atalhos devem ser diferentes.");return;}
+    if(!Path.IsPathRooted(folder.Text)||capture.SelectedItem==null||file.SelectedItem==null||freeKey.SelectedItem==null){MessageBox.Show(this,"Informe uma pasta absoluta e os atalhos.");return;}
+    if(capture.SelectedItem.ToString()==file.SelectedItem.ToString()||capture.SelectedItem.ToString()==freeKey.SelectedItem.ToString()||file.SelectedItem.ToString()==freeKey.SelectedItem.ToString()){MessageBox.Show(this,"Os três atalhos devem ser diferentes.");return;}
     // Clone through data contract so cancel never mutates live preferences.
     using(var ms=new MemoryStream()){var ser=new System.Runtime.Serialization.Json.DataContractJsonSerializer(typeof(Preferences));ser.WriteObject(ms,current);ms.Position=0;Value=(Preferences)ser.ReadObject(ms);}
-    Value.Folder=folder.Text;Value.Format=(string)format.SelectedItem;Value.Appearance=appearance.SelectedIndex==1?"light":"dark";Value.Modifiers=selectedMods();Value.CaptureKey=capture.SelectedItem.ToString()[0];Value.FileKey=file.SelectedItem.ToString()[0];Value.Sound=sound.Checked;Value.BarOpacity=(int)barOpacity.Value;DialogResult=DialogResult.OK;Close();
-   },true);var actions=new FlowLayoutPanel{Dock=DockStyle.Fill,FlowDirection=FlowDirection.RightToLeft};var cancel=UI.Button("Cancelar",()=>Close(),false);cancel.DialogResult=DialogResult.Cancel;actions.Controls.Add(save);actions.Controls.Add(cancel);panel.Controls.Add(actions,0,13);panel.SetColumnSpan(actions,2);Controls.Add(panel);AcceptButton=save;CancelButton=cancel;
+    Value.Folder=folder.Text;Value.Format=(string)format.SelectedItem;Value.Appearance=appearance.SelectedIndex==1?"light":"dark";Value.Modifiers=selectedMods();Value.CaptureKey=capture.SelectedItem.ToString()[0];Value.FileKey=file.SelectedItem.ToString()[0];Value.FreeKey=freeKey.SelectedItem.ToString()[0];Value.Sound=sound.Checked;Value.BarOpacity=(int)barOpacity.Value;DialogResult=DialogResult.OK;Close();
+   },true);var actions=new FlowLayoutPanel{Dock=DockStyle.Fill,FlowDirection=FlowDirection.RightToLeft};var cancel=UI.Button("Cancelar",()=>Close(),false);cancel.DialogResult=DialogResult.Cancel;actions.Controls.Add(save);actions.Controls.Add(cancel);panel.Controls.Add(actions,0,14);panel.SetColumnSpan(actions,2);Controls.Add(panel);AcceptButton=save;CancelButton=cancel;
   }
  }
 }

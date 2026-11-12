@@ -94,23 +94,39 @@ namespace MyShot {
   protected override void OnPaint(PaintEventArgs e){e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;using(var path=Theme.Round(new RectangleF(0,0,Width-1,Height-1),10))using(var b=new SolidBrush(Theme.Accent))e.Graphics.FillPath(b,path);Theme.DrawIcon(e.Graphics,"capture",Theme.OnAccent,new Rectangle(Width/6,Height/6,Width*2/3,Height*2/3));}
  }
  internal sealed class ShotStripRenderer : ToolStripProfessionalRenderer {
-
-  internal ShotStripRenderer(){RoundedEdges=false;}
+  // accentHover: o botão fica azul com ícone branco enquanto o mouse está em cima (barra de captura).
+  readonly bool accentHover;
+  internal ShotStripRenderer(bool accentHover=false){RoundedEdges=false;this.accentHover=accentHover;}
+  // Menus de contexto no estilo do app: cores do tema, destaque azul no hover, sem coluna de ícones.
+  internal static void StyleMenu(ContextMenuStrip menu){
+   menu.Renderer=new ShotStripRenderer(true);
+   menu.BackColor=Theme.Surface;menu.ForeColor=Theme.Ink;menu.ShowImageMargin=true;menu.Font=new Font("Segoe UI",10f);
+  }
+  bool Highlighted(ToolStripItem item){return accentHover&&(item.Selected||item.Pressed);}
   protected override void OnRenderItemImage(ToolStripItemImageRenderEventArgs e){
    string name;Color color;
-   if(Theme.TryGetIcon(e.Image,out name,out color)){Theme.DrawIcon(e.Graphics,name,e.Item.Enabled?color:Theme.Muted,e.ImageRectangle);return;}
+   // Ícones de menu usam a cor do tema atual na hora de desenhar, então acompanham a troca de tema.
+   if(Theme.TryGetIcon(e.Image,out name,out color)){Color shown=Highlighted(e.Item)?Theme.OnAccent:e.Item is ToolStripMenuItem?Theme.Ink:color;Theme.DrawIcon(e.Graphics,name,e.Item.Enabled?shown:Theme.Muted,e.ImageRectangle);return;}
    base.OnRenderItemImage(e);
   }
   protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e){e.Graphics.Clear(Theme.Surface);}
-  protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e){}
+  // Coluna de ícones dos menus com o fundo do tema, em vez do cinza padrão do Windows.
+  protected override void OnRenderImageMargin(ToolStripRenderEventArgs e){using(var b=new SolidBrush(Theme.Surface))e.Graphics.FillRectangle(b,e.AffectedBounds);}
+  // Menus ganham uma borda fina do tema; a barra continua sem borda.
+  protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e){if(e.ToolStrip is ToolStripDropDown){using(var p=new Pen(Theme.Border))e.Graphics.DrawRectangle(p,0,0,e.ToolStrip.Width-1,e.ToolStrip.Height-1);}}
+  protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e){
+   if(e.Vertical){base.OnRenderSeparator(e);return;}
+   using(var p=new Pen(Theme.Border))e.Graphics.DrawLine(p,10,e.Item.Height/2,e.Item.Width-10,e.Item.Height/2);
+  }
   // Item de lista suspensa: destaque com a cor do tema, sem o azul padrão do Windows.
-  protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e){using(var b=new SolidBrush(e.Item.Selected?Theme.Raised:Theme.Surface))e.Graphics.FillRectangle(b,new Rectangle(Point.Empty,e.Item.Size));}
+  protected override void OnRenderMenuItemBackground(ToolStripItemRenderEventArgs e){using(var b=new SolidBrush(Highlighted(e.Item)?Theme.Accent:e.Item.Selected?Theme.Raised:Theme.Surface))e.Graphics.FillRectangle(b,new Rectangle(Point.Empty,e.Item.Size));}
   protected override void OnRenderButtonBackground(ToolStripItemRenderEventArgs e){
    var button=e.Item as ToolStripButton;bool selected=button!=null&&button.Checked;bool primary=Equals(e.Item.Tag,"primary");
    var r=new RectangleF(2,2,e.Item.Width-4,e.Item.Height-4);e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;
+   if(Highlighted(e.Item)){using(var p=Theme.Round(r,5))using(var b=new SolidBrush(Theme.Accent))e.Graphics.FillPath(b,p);return;}
    if(selected||primary||e.Item.Selected||e.Item.Pressed){using(var p=Theme.Round(r,5))using(var b=new SolidBrush(primary?Theme.Accent:selected||e.Item.Pressed?Theme.Selected:Theme.Raised))e.Graphics.FillPath(b,p);}
    if(selected)using(var p=Theme.Round(r,5))using(var pen=new Pen(Theme.Accent))e.Graphics.DrawPath(pen,p);
   }
-  protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e){e.TextColor=!e.Item.Enabled?Theme.Muted:Equals(e.Item.Tag,"primary")?Theme.OnAccent:Theme.Ink;base.OnRenderItemText(e);}
+  protected override void OnRenderItemText(ToolStripItemTextRenderEventArgs e){e.TextColor=!e.Item.Enabled?Theme.Muted:Equals(e.Item.Tag,"primary")||Highlighted(e.Item)?Theme.OnAccent:Theme.Ink;base.OnRenderItemText(e);}
  }
 }

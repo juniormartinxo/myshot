@@ -25,6 +25,7 @@ namespace MyShot {
   [DataMember] public string Appearance = "dark";
   [DataMember] public int CaptureKey = (int)Keys.S;
   [DataMember] public int FileKey = (int)Keys.F;
+  [DataMember] public int FreeKey = (int)Keys.A;
   [DataMember] public bool ShiftInsteadOfAlt {get;set;}
   // Modificadores do atalho em bits (Alt=1, Ctrl=2, Shift=4, Win=8). Zero = arquivo antigo: usa ShiftInsteadOfAlt.
   [DataMember] public int Modifiers;
@@ -40,6 +41,10 @@ namespace MyShot {
   [DataMember] public int FontSize = 16;
   [DataMember] public string FontFamily = "Segoe UI";
   [DataMember] public bool Filled;
+  // Última região capturada, em coordenadas da tela virtual. Largura ou altura menor que 2 = nenhuma.
+  [DataMember] public int RegionX, RegionY, RegionWidth, RegionHeight;
+  internal Rectangle? LastRegion { get { return RegionWidth>1 && RegionHeight>1 ? new Rectangle(RegionX,RegionY,RegionWidth,RegionHeight) : (Rectangle?)null; } }
+  internal void SetLastRegion(Rectangle? region) { var r=region.HasValue?region.Value:Rectangle.Empty; RegionX=r.X; RegionY=r.Y; RegionWidth=r.Width; RegionHeight=r.Height; }
   internal static string PathName { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"MyShot","preferences.json"); } }
   internal static Preferences Load(string path, out string warning) {
    warning=null;
@@ -54,6 +59,7 @@ namespace MyShot {
      if(String.IsNullOrWhiteSpace(p.FontFamily))p.FontFamily="Segoe UI";
      if(p.CaptureKey<65||p.CaptureKey>90)p.CaptureKey=83;
      if(p.FileKey<65||p.FileKey>90)p.FileKey=70;
+     if(p.FreeKey<65||p.FreeKey>90)p.FreeKey=65;
      return p;
     }
    }catch(Exception e) { warning="Preferências não carregadas: "+e.Message; return new Preferences(); }

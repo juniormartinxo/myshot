@@ -159,7 +159,7 @@ namespace MyShot {
    }
   }
   static void UpdateChecks(){
-   Check(Updates.IsNewer("v0.2.0")&&Updates.IsNewer("0.0.4")&&!Updates.IsNewer("v0.0.3")&&!Updates.IsNewer("v0.0.2")&&!Updates.IsNewer("v0.0.1")&&!Updates.IsNewer("nao-e-versao"),"update compares semantic versions");
+   Check(Updates.IsNewer("v0.2.0")&&Updates.IsNewer("0.0.5")&&!Updates.IsNewer("v0.0.4")&&!Updates.IsNewer("v0.0.3")&&!Updates.IsNewer("v0.0.2")&&!Updates.IsNewer("v0.0.1")&&!Updates.IsNewer("nao-e-versao"),"update compares semantic versions");
    Check(Updates.IsTrusted("https://github.com/juniormartinxo/myshot/releases/download/v0.2.0/MyShot.exe")&&!Updates.IsTrusted("http://github.com/x")&&!Updates.IsTrusted("https://evil.example/MyShot.exe"),"update accepts only HTTPS GitHub hosts");
    string sum="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad  MyShot.exe\n";
    Check(Updates.ExpectedHash(sum,"MyShot.exe")=="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"&&Updates.ExpectedHash(sum,"Other.exe")==null,"checksum file selects the MyShot.exe entry");
@@ -316,6 +316,16 @@ namespace MyShot {
     }
     var p=new Preferences{Folder=output,Format="bmp",ShiftInsteadOfAlt=true,Color=Color.Blue.ToArgb(),FontSize=31,Filled=true,Opacity=60,Thickness=7};string prefPath=Path.Combine(output,"preferences-test.json");p.Save(prefPath);p.Format="jpg";p.Save(prefPath);string warning;var loaded=Preferences.Load(prefPath,out warning);
     Check(warning==null&&loaded.Format=="jpg"&&loaded.ShiftInsteadOfAlt&&loaded.Thickness==7&&loaded.Filled&&loaded.Opacity==60&&loaded.FontSize==31,"preferences persist and atomically replace");
+    Check(new Preferences().LastRegion==null&&new Preferences{RegionWidth=1,RegionHeight=50}.LastRegion==null,"no last region unless width and height are at least 2");
+    p.SetLastRegion(new Rectangle(-1280,40,800,600));p.Save(prefPath);loaded=Preferences.Load(prefPath,out warning);
+    Check(warning==null&&loaded.LastRegion==new Rectangle(-1280,40,800,600),"last region persists across restarts");
+    using(var source=new Bitmap(100,100,System.Drawing.Imaging.PixelFormat.Format32bppArgb)){
+     using(var sg=Graphics.FromImage(source))sg.Clear(Color.Red);
+     using(var cut=PolygonCapture.Crop(source,new[]{new Point(10,10),new Point(60,10),new Point(10,60)})){
+      Check(cut!=null&&cut.Width==51&&cut.Height==51&&cut.GetPixel(5,5).A==255&&cut.GetPixel(50,50).A==0,"free-form capture keeps the polygon and makes the outside transparent");
+     }
+     using(var none=PolygonCapture.Crop(source,new[]{new Point(1,1),new Point(1,1),new Point(1,1)}))Check(none==null,"degenerate free-form selection is rejected");
+    }
     Check(Preferences.ModifierText(Preferences.ModCtrl|Preferences.ModWin)=="Ctrl+Win"&&new Preferences{Modifiers=Preferences.ModAlt|Preferences.ModShift}.HotkeyModifiers==(Preferences.ModAlt|Preferences.ModShift)&&new Preferences().HotkeyModifiers==(Preferences.ModCtrl|Preferences.ModAlt),"hotkey modifiers accept any combination and keep the old default");
     File.WriteAllText(prefPath,"corrupt");loaded=Preferences.Load(prefPath,out warning);Check(warning!=null&&loaded.Format=="png","corrupt preferences fall back with warning");
     Check(WindowsStartup.Command(@"C:\Pasta com espaço\ação\MyShot.exe")=="\"C:\\Pasta com espaço\\ação\\MyShot.exe\" --startup","startup command quotes spaces and Unicode correctly");
