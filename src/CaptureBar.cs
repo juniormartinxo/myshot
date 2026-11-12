@@ -7,7 +7,7 @@ namespace MyShot {
  // Barra pequena no topo da tela, no estilo da barra de captura do Windows. É a única interface que o app mostra ao abrir.
  internal sealed class CaptureBar : Form {
   readonly Home home;
-  readonly ToolStrip strip=new ToolStrip{GripStyle=ToolStripGripStyle.Hidden,Dock=DockStyle.Fill,BackColor=Theme.Surface,Renderer=new ShotStripRenderer(),ImageScalingSize=new Size(Theme.BarIconSize,Theme.BarIconSize),Padding=new Padding(24,4,24,12)};
+  readonly ToolStrip strip=new ToolStrip{GripStyle=ToolStripGripStyle.Hidden,Dock=DockStyle.Fill,BackColor=Theme.Surface,Renderer=new ShotStripRenderer(true),ImageScalingSize=new Size(Theme.BarIconSize,Theme.BarIconSize),Padding=new Padding(24,4,24,12)};
   readonly DragGrip grip;
   readonly ToolStripButton region,freeform,desktop,direct;
 
@@ -17,7 +17,7 @@ namespace MyShot {
    // Sempre na frente das outras aplicações; só some ao fechar ou ir para a bandeja (e durante a captura).
    TopMost=true;
    // Vidro escuro: a janela inteira fica semitransparente, sem cantos arredondados.
-   region=Add("Capturar região",()=>home.BeginCapture(false,false));region.Tag="primary";region.Image=Theme.Icon("capture",Theme.OnAccent);
+   region=Add("Capturar região",()=>home.BeginCapture(false,false));region.Image=Theme.Icon("capture",Theme.Ink);
    freeform=Add("Área livre",()=>home.BeginCapture(false,false,false,true));freeform.Image=Theme.Icon("Polygon",Theme.Ink);freeform.ToolTipText="Capturar área livre: marque os cantos de um polígono";
    desktop=Add("Desktop inteiro",()=>home.BeginCapture(false,true));desktop.Image=Theme.Icon("desktop",Theme.Ink);desktop.ToolTipText="Capturar o desktop inteiro, com todas as telas";
    direct=Add("Salvar desktop direto",()=>home.BeginCapture(true,true));direct.Image=Theme.Icon("save",Theme.Ink);
@@ -36,6 +36,8 @@ namespace MyShot {
     var item=strip.GetItemAt(e.Location);
     if(item==null||item is ToolStripSeparator)StartDrag();
    };
+   // Mão só sobre os botões; o resto da barra continua arrastando a janela.
+   strip.MouseMove+=(s,e)=>{strip.Cursor=strip.GetItemAt(e.Location) is ToolStripButton?Cursors.Hand:Cursors.Default;};
   }
 
   [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool ReleaseCapture();
@@ -68,6 +70,9 @@ namespace MyShot {
    direct.ToolTipText=saveOk?"Salvar desktop direto ("+save+")":"Atalho "+save+" em uso. Altere em Preferências";
    freeform.ToolTipText=freeOk?"Capturar área livre ("+free+"): marque os cantos de um polígono":"Atalho "+free+" em uso. Altere em Preferências";
   }
+
+  // Barra recriada ao trocar o tema: assume a posição da anterior em vez de voltar ao centro.
+  internal void TakePlaceOf(CaptureBar previous){placed=true;Location=previous.Location;}
 
   // Primeira abertura: centralizada no topo. Depois, reabre onde o usuário a deixou, mantida dentro da área de trabalho.
   internal void Present(){

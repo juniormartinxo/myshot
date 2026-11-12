@@ -10,7 +10,7 @@ namespace MyShot {
  internal sealed class Home : Form {
   internal Preferences Prefs;
   readonly NotifyIcon tray;
-  readonly CaptureBar bar;
+  CaptureBar bar;
   readonly ContextMenuStrip moreMenu=new ContextMenuStrip();
   readonly ToolStripMenuItem updateItem;
   bool capturing;
@@ -63,14 +63,27 @@ namespace MyShot {
 
   protected override void WndProc(ref Message m){if(m.Msg==0x0312){int id=m.WParam.ToInt32();if(id==3){BeginCapture(false,false,false,true);return;}BeginCapture(id==2,id==2);return;}base.WndProc(ref m);}
 
+  void RecreateBar(){
+   var old=bar;bool visible=old.Visible;
+   bar=new CaptureBar(this);bar.TakePlaceOf(old);bar.ApplyOpacity(Prefs.BarOpacity);
+   old.Dispose();
+   if(visible)bar.Present();
+  }
+
   internal void OpenSettings(){
+   // Enquanto houver uma janela de edição aberta, as Preferências não abrem (a troca de tema recria a barra).
+   if(editors.Count>0){MessageBox.Show(DialogOwner(),"Feche as janelas de edição antes de abrir as Preferências.","MyShot",MessageBoxButtons.OK,MessageBoxIcon.Information);return;}
    using(var f=new SettingsDialog(Prefs)){
     IWin32Window owner=DialogOwner();
     if(f.ShowDialog(owner)==DialogResult.OK){
      bool themeChanged=f.Value.Appearance!=Prefs.Appearance;
      f.Value.SetLastRegion(Prefs.LastRegion);
-     try{f.Value.Save(Preferences.PathName);Prefs=f.Value;RegisterKeys();bar.ApplyOpacity(Prefs.BarOpacity);}catch(Exception e){UI.Error(owner,e);return;}
-     if(themeChanged)MessageBox.Show(owner,"O novo tema será aplicado na próxima abertura do MyShot.","MyShot",MessageBoxButtons.OK,MessageBoxIcon.Information);
+     try{
+      f.Value.Save(Preferences.PathName);Prefs=f.Value;
+      // O tema é aplicado na hora: as cores da barra ficam fixadas na criação, então ela é recriada.
+      if(themeChanged){Theme.Apply(Prefs.Appearance!="light");RecreateBar();}
+      RegisterKeys();bar.ApplyOpacity(Prefs.BarOpacity);
+     }catch(Exception e){UI.Error(owner,e);return;}
      try{f.ApplyStartup();}catch(Exception e){MessageBox.Show(owner,"As outras preferências foram salvas, mas não foi possível alterar a inicialização com o Windows.\n\n"+e.Message,"MyShot",MessageBoxButtons.OK,MessageBoxIcon.Error);}
     }
    }
