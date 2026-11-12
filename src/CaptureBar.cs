@@ -21,10 +21,11 @@ namespace MyShot {
    freeform=Add("Área livre",()=>home.BeginCapture(false,false,false,true));freeform.Image=Theme.Icon("Polygon",Theme.Ink);freeform.ToolTipText="Capturar área livre: marque os cantos de um polígono";
    desktop=Add("Desktop inteiro",()=>home.BeginCapture(false,true));desktop.Image=Theme.Icon("desktop",Theme.Ink);desktop.ToolTipText="Capturar o desktop inteiro, com todas as telas";
    direct=Add("Salvar desktop direto",()=>home.BeginCapture(true,true));direct.Image=Theme.Icon("save",Theme.Ink);
-   strip.Items.Add(new ToolStripSeparator());
    var prefs=Add("Preferências",()=>home.OpenSettings());prefs.Image=Theme.Icon("style",Theme.Ink);prefs.ToolTipText="Preferências: pasta, formato, atalhos e aparência";
    var more=Add("Mais opções",()=>home.ShowMoreMenu());more.Image=Theme.Icon("more",Theme.Ink);more.ToolTipText="Mais opções: atualizar o MyShot e outras ações";
    var close=Add("Fechar barra (o MyShot continua na bandeja)",()=>Hide());close.Image=Theme.Icon("close",Theme.Ink);
+   // Versão do app ao lado do botão fechar; some junto com a barra.
+   strip.Items.Add(new ToolStripLabel("versão "+AppInfo.Version){Font=new Font("Segoe UI",9f),Margin=new Padding(6,0,0,0),AccessibleName="Versão do MyShot"});
    // Alça de arrasto embaixo da barra; o fundo dos botões também arrasta, sem cursor de movimento sobre a barra inteira.
    grip=new DragGrip(StartDrag){Dock=DockStyle.Bottom,Height=Dip(24)};
    Controls.Add(grip);Controls.Add(strip);
