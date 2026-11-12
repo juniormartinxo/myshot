@@ -36,8 +36,6 @@ namespace MyShot {
     var item=strip.GetItemAt(e.Location);
     if(item==null||item is ToolStripSeparator)StartDrag();
    };
-   // Mão só sobre os botões; o resto da barra continua arrastando a janela.
-   strip.MouseMove+=(s,e)=>{strip.Cursor=strip.GetItemAt(e.Location) is ToolStripButton?Cursors.Hand:Cursors.Default;};
   }
 
   [System.Runtime.InteropServices.DllImport("user32.dll")] static extern bool ReleaseCapture();
