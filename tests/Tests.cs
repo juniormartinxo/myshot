@@ -159,7 +159,7 @@ namespace MyShot {
    }
   }
   static void UpdateChecks(){
-   Check(Updates.IsNewer("v0.2.0")&&Updates.IsNewer("0.0.3")&&!Updates.IsNewer("v0.0.2")&&!Updates.IsNewer("v0.0.1")&&!Updates.IsNewer("nao-e-versao"),"update compares semantic versions");
+   Check(Updates.IsNewer("v0.2.0")&&Updates.IsNewer("0.0.4")&&!Updates.IsNewer("v0.0.3")&&!Updates.IsNewer("v0.0.2")&&!Updates.IsNewer("v0.0.1")&&!Updates.IsNewer("nao-e-versao"),"update compares semantic versions");
    Check(Updates.IsTrusted("https://github.com/juniormartinxo/myshot/releases/download/v0.2.0/MyShot.exe")&&!Updates.IsTrusted("http://github.com/x")&&!Updates.IsTrusted("https://evil.example/MyShot.exe"),"update accepts only HTTPS GitHub hosts");
    string sum="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad  MyShot.exe\n";
    Check(Updates.ExpectedHash(sum,"MyShot.exe")=="ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad"&&Updates.ExpectedHash(sum,"Other.exe")==null,"checksum file selects the MyShot.exe entry");

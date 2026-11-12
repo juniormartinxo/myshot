@@ -64,7 +64,7 @@ Os artefatos ficam em `artifacts\` (ignorada pelo Git). O script gera:
 
 ### Publicar uma versão
 
-1. Altere `AppInfo.Version` em `src\Updater.cs` (ex.: `0.0.2`).
+1. Altere `AppInfo.Version` em `src\Updater.cs` (ex.: `0.0.3`).
 2. Rode o build com `-Test` e confira que os testes passam.
 3. Assine o manifesto da versão com `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\sign-release.ps1`. Ele gera `artifacts\MyShot.manifest` (versão, SHA-256 e tamanho do executável) e `MyShot.manifest.sig`. A chave privada fica em `%USERPROFILE%\.myshot-keys` e nunca entra no repositório.
 4. Faça commit, crie a tag `v0.0.2` e publique a release no GitHub com estes arquivos: `MyShot.exe`, `MyShot.exe.config`, `MyShot.exe.sha256`, `MyShot.manifest`, `MyShot.manifest.sig` e `MyShot-Setup.exe`. Os nomes precisam ser exatamente esses.
