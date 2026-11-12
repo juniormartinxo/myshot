@@ -40,6 +40,10 @@ namespace MyShot {
   [DataMember] public int FontSize = 16;
   [DataMember] public string FontFamily = "Segoe UI";
   [DataMember] public bool Filled;
+  // Última região capturada, em coordenadas da tela virtual. Largura ou altura menor que 2 = nenhuma.
+  [DataMember] public int RegionX, RegionY, RegionWidth, RegionHeight;
+  internal Rectangle? LastRegion { get { return RegionWidth>1 && RegionHeight>1 ? new Rectangle(RegionX,RegionY,RegionWidth,RegionHeight) : (Rectangle?)null; } }
+  internal void SetLastRegion(Rectangle? region) { var r=region.HasValue?region.Value:Rectangle.Empty; RegionX=r.X; RegionY=r.Y; RegionWidth=r.Width; RegionHeight=r.Height; }
   internal static string PathName { get { return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"MyShot","preferences.json"); } }
   internal static Preferences Load(string path, out string warning) {
    warning=null;

@@ -27,7 +27,7 @@ namespace MyShot {
    bar.ApplyOpacity(Prefs.BarOpacity);
    updateItem=new ToolStripMenuItem("Atualizar",null,(s,e)=>CheckForUpdates());
    moreMenu.Items.Add(updateItem);moreMenu.Items.Add("Ir para a bandeja",null,(s,e)=>bar.Hide());moreMenu.Items.Add(new ToolStripSeparator());moreMenu.Items.Add("Sair",null,(s,e)=>Exit());
-   var menu=new ContextMenuStrip();menu.Items.Add("Capturar região",null,(s,e)=>BeginCapture(false,false));menu.Items.Add("Salvar desktop direto",null,(s,e)=>BeginCapture(true,true));menu.Items.Add("Abrir MyShot",null,(s,e)=>Restore());menu.Items.Add("Preferências",null,(s,e)=>{Restore();OpenSettings();});menu.Items.Add(new ToolStripSeparator());menu.Items.Add("Sair",null,(s,e)=>Exit());
+   var menu=new ContextMenuStrip();menu.Items.Add("Capturar região",null,(s,e)=>BeginCapture(false,false));menu.Items.Add("Repetir última região",null,(s,e)=>BeginCapture(false,false,true));menu.Items.Add("Salvar desktop direto",null,(s,e)=>BeginCapture(true,true));menu.Items.Add("Abrir MyShot",null,(s,e)=>Restore());menu.Items.Add("Preferências",null,(s,e)=>{Restore();OpenSettings();});menu.Items.Add(new ToolStripSeparator());menu.Items.Add("Sair",null,(s,e)=>Exit());
    tray=new NotifyIcon{Text="MyShot · Captura de tela",Icon=Theme.AppIcon,ContextMenuStrip=menu,Visible=true};tray.DoubleClick+=(s,e)=>Restore();
    RegisterKeys();
    if(warning!=null&&!Quiet)tray.ShowBalloonTip(4000,"MyShot",warning,ToolTipIcon.Warning);
@@ -67,6 +67,7 @@ namespace MyShot {
     IWin32Window owner=DialogOwner();
     if(f.ShowDialog(owner)==DialogResult.OK){
      bool themeChanged=f.Value.Appearance!=Prefs.Appearance;
+     f.Value.SetLastRegion(Prefs.LastRegion);
      try{f.Value.Save(Preferences.PathName);Prefs=f.Value;RegisterKeys();bar.ApplyOpacity(Prefs.BarOpacity);}catch(Exception e){UI.Error(owner,e);return;}
      if(themeChanged)MessageBox.Show(owner,"O novo tema será aplicado na próxima abertura do MyShot.","MyShot",MessageBoxButtons.OK,MessageBoxIcon.Information);
      try{f.ApplyStartup();}catch(Exception e){MessageBox.Show(owner,"As outras preferências foram salvas, mas não foi possível alterar a inicialização com o Windows.\n\n"+e.Message,"MyShot",MessageBoxButtons.OK,MessageBoxIcon.Error);}
@@ -74,7 +75,7 @@ namespace MyShot {
    }
   }
 
-  internal async void BeginCapture(bool direct,bool whole) {
+  internal async void BeginCapture(bool direct,bool whole,bool reuse=false) {
    if(capturing)return;capturing=true;
    bool restore=bar.Visible;var visibleEditors=editors.FindAll(x=>x.Visible);Editor opened=null;
    try {
@@ -85,7 +86,17 @@ namespace MyShot {
      Bitmap selected=null;
      try {
       if(whole)selected=(Bitmap)desktop.Clone();
-      else using(var selection=new Selection(desktop,bounds)){if(selection.ShowDialog()==DialogResult.OK)selected=desktop.Clone(selection.Selected,System.Drawing.Imaging.PixelFormat.Format32bppArgb);}
+      else {
+       // "Repetir" usa a última região sem perguntar; se ela não couber mais na tela, abre a seleção.
+       Rectangle? fixedRegion=reuse?ToDesktop(Prefs.LastRegion,bounds):null;
+       if(fixedRegion.HasValue)selected=desktop.Clone(fixedRegion.Value,System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+       else using(var selection=new Selection(desktop,bounds,ToDesktop(Prefs.LastRegion,bounds))){
+        if(selection.ShowDialog()==DialogResult.OK){
+         selected=desktop.Clone(selection.Selected,System.Drawing.Imaging.PixelFormat.Format32bppArgb);
+         RememberRegion(selection.Selected,bounds);
+        }
+       }
+      }
       if(selected==null)return;
       if(Prefs.Sound)CaptureSound.Play();
       if(direct){Directory.CreateDirectory(Prefs.Folder);string path=Path.Combine(Prefs.Folder,"MyShot-"+DateTime.Now.ToString("yyyyMMdd-HHmmss-fff")+"-"+Guid.NewGuid().ToString("N").Substring(0,6)+"."+Prefs.Format);ImageOutput.Save(selected,path);tray.ShowBalloonTip(2500,"Imagem salva",path,ToolTipIcon.Info);}
@@ -94,6 +105,20 @@ namespace MyShot {
     }
    }catch(Exception e){Restore();MessageBox.Show(DialogOwner(),"Não foi possível capturar o desktop. Execute na sessão interativa do Windows, fora da tela de bloqueio.\n\n"+e.Message,"MyShot",MessageBoxButtons.OK,MessageBoxIcon.Error);}
    finally{capturing=false;foreach(var editor in visibleEditors)if(!editor.IsDisposed)editor.Show();if(restore)Restore();if(opened!=null&&!opened.IsDisposed){opened.BringToFront();opened.Activate();}}
+  }
+
+  // Converte uma região da tela virtual para coordenadas do desktop capturado, limitada a ele.
+  static Rectangle? ToDesktop(Rectangle? screenRegion,Rectangle bounds){
+   if(!screenRegion.HasValue)return null;
+   var r=screenRegion.Value;r.Offset(-bounds.X,-bounds.Y);
+   r=Rectangle.Intersect(new Rectangle(Point.Empty,bounds.Size),r);
+   return r.Width>1&&r.Height>1?r:(Rectangle?)null;
+  }
+  // Guarda a última região em coordenadas da tela virtual. Se não for possível gravar, a captura continua normalmente.
+  void RememberRegion(Rectangle desktopRegion,Rectangle bounds){
+   var r=desktopRegion;r.Offset(bounds.X,bounds.Y);
+   Prefs.SetLastRegion(r);
+   try{Persist();}catch(Exception){}
   }
 
   // Ação explícita do botão Atualizar: consulta a última release, confirma com o usuário e instala.

@@ -38,9 +38,11 @@ namespace MyShot {
  }
  internal sealed class Selection : Form {
   readonly Bitmap desktop;Point origin,current;bool dragging;
+  // Última região (em coordenadas do desktop): aparece destacada e Enter a confirma sem arrastar de novo.
+  readonly Rectangle? previous;
   internal Rectangle Selected;
-  internal Selection(Bitmap image,Rectangle bounds) {
-   desktop=image;AutoScaleMode=AutoScaleMode.None;FormBorderStyle=FormBorderStyle.None;StartPosition=FormStartPosition.Manual;MaximumSize=bounds.Size;MinimumSize=bounds.Size;Bounds=bounds;TopMost=true;ShowInTaskbar=false;Cursor=Cursors.Cross;DoubleBuffered=true;KeyPreview=true;
+  internal Selection(Bitmap image,Rectangle bounds,Rectangle? remembered) {
+   desktop=image;previous=remembered;AutoScaleMode=AutoScaleMode.None;FormBorderStyle=FormBorderStyle.None;StartPosition=FormStartPosition.Manual;MaximumSize=bounds.Size;MinimumSize=bounds.Size;Bounds=bounds;TopMost=true;ShowInTaskbar=false;Cursor=Cursors.Cross;DoubleBuffered=true;KeyPreview=true;
    Shown+=(s,e)=>{Bounds=bounds;Activate();Native.SetForegroundWindow(Handle);};
   }
   protected override void OnPaint(PaintEventArgs e){
@@ -51,7 +53,8 @@ namespace MyShot {
    if(!dragging)using(var guide=new Pen(Color.FromArgb(120,Color.White),1)){e.Graphics.DrawLine(guide,0,mouse.Y,ClientSize.Width,mouse.Y);e.Graphics.DrawLine(guide,mouse.X,0,mouse.X,ClientSize.Height);}
    var r=Geometry.Between(origin,current);
    if(dragging&&r.Width>0&&r.Height>0){e.Graphics.DrawImage(desktop,r,r,GraphicsUnit.Pixel);using(var pen=new Pen(Color.White,1))e.Graphics.DrawRectangle(pen,r);}
-   string label=dragging?r.Width+" × "+r.Height+" px   ·   Esc cancela":"Arraste para selecionar uma região   ·   Esc cancela";
+   else if(!dragging&&previous.HasValue){var p=previous.Value;e.Graphics.DrawImage(desktop,p,p,GraphicsUnit.Pixel);using(var pen=new Pen(Theme.Accent,2)){pen.DashStyle=DashStyle.Dash;e.Graphics.DrawRectangle(pen,p);}}
+   string label=dragging?r.Width+" × "+r.Height+" px   ·   Esc cancela":previous.HasValue?"Enter: última região   ·   Arraste: nova   ·   Esc cancela":"Arraste para selecionar uma região   ·   Esc cancela";
    int x=Math.Max(8,Math.Min(ClientSize.Width-380,mouse.X+18)),y=Math.Max(8,Math.Min(ClientSize.Height-42,mouse.Y+22));
    e.Graphics.SmoothingMode=SmoothingMode.AntiAlias;using(var bg=new SolidBrush(Color.FromArgb(235,Theme.Canvas)))using(var shape=Theme.Round(new RectangleF(x,y,370,32),6))e.Graphics.FillPath(bg,shape);
    TextRenderer.DrawText(e.Graphics,label,SystemFonts.MessageBoxFont,new Point(x+10,y+9),Theme.Ink);
@@ -59,7 +62,7 @@ namespace MyShot {
   protected override void OnMouseDown(MouseEventArgs e){if(e.Button==MouseButtons.Right){DialogResult=DialogResult.Cancel;Close();}if(e.Button!=MouseButtons.Left)return;origin=current=e.Location;dragging=true;Capture=true;Invalidate();}
   protected override void OnMouseMove(MouseEventArgs e){if(dragging)current=new Point(Math.Max(0,Math.Min(ClientSize.Width,e.X)),Math.Max(0,Math.Min(ClientSize.Height,e.Y)));Invalidate();}
   protected override void OnMouseUp(MouseEventArgs e){if(!dragging||e.Button!=MouseButtons.Left)return;Capture=false;Selected=Rectangle.Intersect(new Rectangle(Point.Empty,desktop.Size),Geometry.Between(origin,current));if(Selected.Width<2||Selected.Height<2){dragging=false;Invalidate();return;}DialogResult=DialogResult.OK;Close();}
-  protected override bool ProcessCmdKey(ref Message msg,Keys key){if(key==Keys.Escape){DialogResult=DialogResult.Cancel;Close();return true;}return base.ProcessCmdKey(ref msg,key);}
+  protected override bool ProcessCmdKey(ref Message msg,Keys key){if(key==Keys.Escape){DialogResult=DialogResult.Cancel;Close();return true;}if(key==Keys.Enter&&previous.HasValue&&!dragging){Selected=previous.Value;DialogResult=DialogResult.OK;Close();return true;}return base.ProcessCmdKey(ref msg,key);}
   protected override void WndProc(ref Message m){if(m.Msg==0x02E0)return;base.WndProc(ref m);}
  }
  internal sealed class Canvas : Control {
