@@ -43,6 +43,7 @@ Os testes automáticos (`scripts\build.ps1 -Test`) cobrem a lógica e a renderiz
 ## Instalador
 
 - Execute `MyShot-Setup.exe` sem permissão de administrador. O app deve ser copiado para `%LOCALAPPDATA%\Programs\MyShot`, aparecer no menu Iniciar e abrir.
+- Com o app instalado e rodando, desinstale por Aplicativos instalados do Windows. O processo deve ser encerrado, a pasta e o atalho do menu Iniciar removidos, e a entrada `MyShot` em `HKCU\Software\Microsoft\Windows\CurrentVersion\Run` apagada.
 
 ## Registro de execução
 

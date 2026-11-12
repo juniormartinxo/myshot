@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Drawing;
 using System.Drawing.Drawing2D;
-using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace MyShot {
@@ -28,8 +27,7 @@ namespace MyShot {
    }
    Accent=Rgb(43,111,214);AccentHover=dark?Rgb(58,127,227):Rgb(33,92,184);
   }
-  [DllImport("user32.dll")] static extern bool DestroyIcon(IntPtr handle);
-  static Icon CreateAppIcon(){using(var bitmap=new Bitmap(32,32))using(var g=Graphics.FromImage(bitmap)){g.SmoothingMode=SmoothingMode.AntiAlias;using(var p=Round(new RectangleF(0,0,31,31),7))using(var b=new SolidBrush(Accent))g.FillPath(b,p);DrawIcon(g,"capture",OnAccent,new Rectangle(4,4,24,24));IntPtr handle=bitmap.GetHicon();try{using(var borrowed=System.Drawing.Icon.FromHandle(handle))return (Icon)borrowed.Clone();}finally{DestroyIcon(handle);}}}
+  static Icon CreateAppIcon(){using(var stream=typeof(Theme).Assembly.GetManifestResourceStream("MyShot.myshot.ico")){if(stream==null)throw new InvalidOperationException("Ícone do MyShot ausente.");return new Icon(stream,new Size(32,32));}}
   internal static Color Rgb(int r,int g,int b){return System.Drawing.Color.FromArgb(r,g,b);}
   internal static GraphicsPath Round(RectangleF r,float radius){var p=new GraphicsPath();float d=radius*2;p.AddArc(r.X,r.Y,d,d,180,90);p.AddArc(r.Right-d,r.Y,d,d,270,90);p.AddArc(r.Right-d,r.Bottom-d,d,d,0,90);p.AddArc(r.X,r.Bottom-d,d,d,90,90);p.CloseFigure();return p;}
   internal static Label Label(string text,float size,bool bold){return new Label{Text=text,AutoSize=true,Font=new Font("Segoe UI",size,bold?FontStyle.Bold:FontStyle.Regular),ForeColor=bold?Ink:Muted,Margin=new Padding(0),UseMnemonic=false};}

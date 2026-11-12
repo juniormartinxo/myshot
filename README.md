@@ -7,10 +7,11 @@ Aplicativo de captura de tela para Windows (x64), feito em C# com WinForms. Capt
 - Windows 10 ou 11 (x64).
 - .NET Framework 4.8, que já vem instalado no Windows.
 - Não precisa de SDK .NET, NuGet, WSL ou permissão de administrador.
+- Para gerar o instalador (não é necessário para usar o app): [Inno Setup 6](https://jrsoftware.org/isinfo.php), por exemplo com `winget install JRSoftware.InnoSetup`.
 
 ## Instalar
 
-Baixe `MyShot-Setup.exe` na página de [releases](https://github.com/juniormartinxo/myshot/releases) e execute. O instalador copia o app para `%LOCALAPPDATA%\Programs\MyShot` e cria o atalho no menu Iniciar.
+Baixe `MyShot-Setup.exe` na página de [releases](https://github.com/juniormartinxo/myshot/releases) e execute. O instalador copia o app para `%LOCALAPPDATA%\Programs\MyShot`, cria o atalho no menu Iniciar e aparece em Aplicativos instalados do Windows, onde pode ser desinstalado. Desinstalar remove também a inicialização com o Windows; as preferências em `%LOCALAPPDATA%\MyShot` são mantidas.
 
 Alternativa sem instalador: baixe `MyShot.exe` e `MyShot.exe.config` e mantenha os dois na mesma pasta.
 
@@ -48,7 +49,7 @@ O botão **Atualizar** (menu **Mais opções** da barra) consulta a última rele
 
 ## Desenvolvimento
 
-Compilar, testar e gerar os arquivos de release (executável, configuração, checksum e instalador) com o compilador do .NET Framework:
+Compilar, testar e gerar os arquivos de release (executável, configuração, checksum e instalador) com o compilador do .NET Framework e o Inno Setup 6:
 
 ```powershell
 powershell -NoProfile -File .\scripts\build.ps1           # gera artifacts\
@@ -59,11 +60,11 @@ Os artefatos ficam em `artifacts\` (ignorada pelo Git). O script gera:
 
 - `MyShot.exe`, `MyShot.exe.config`
 - `MyShot.exe.sha256`, usado pelo atualizador
-- `MyShot-Setup.exe`, o instalador, com o app embutido
+- `MyShot-Setup.exe`, o instalador (Inno Setup, script em `installer\MyShot.iss`), com o app embutido
 
 ### Publicar uma versão
 
-1. Altere `AppInfo.Version` em `src\Updater.cs` (ex.: `0.0.2`).
+1. Altere `AppInfo.Version` em `src\Updater.cs` (ex.: `0.0.3`).
 2. Rode o build com `-Test` e confira que os testes passam.
 3. Assine o manifesto da versão com `powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\sign-release.ps1`. Ele gera `artifacts\MyShot.manifest` (versão, SHA-256 e tamanho do executável) e `MyShot.manifest.sig`. A chave privada fica em `%USERPROFILE%\.myshot-keys` e nunca entra no repositório.
 4. Faça commit, crie a tag `v0.0.2` e publique a release no GitHub com estes arquivos: `MyShot.exe`, `MyShot.exe.config`, `MyShot.exe.sha256`, `MyShot.manifest`, `MyShot.manifest.sig` e `MyShot-Setup.exe`. Os nomes precisam ser exatamente esses.
