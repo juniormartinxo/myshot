@@ -17,7 +17,7 @@ namespace MyShotSetup {
 
  internal sealed class SetupForm : Form {
   readonly string installDir=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Programs","MyShot");
-  readonly Label status=new Label{AutoSize=false,Dock=DockStyle.Fill,ForeColor=Color.FromArgb(155,161,172),Font=new Font("Segoe UI",9)};
+  readonly Label status=new Label{AutoSize=false,ForeColor=Color.FromArgb(155,161,172),Font=new Font("Segoe UI",9)};
   readonly Button install=new Button{Text="Instalar",Width=140,Height=36,FlatStyle=FlatStyle.Flat,BackColor=Color.FromArgb(43,111,214),ForeColor=Color.White,Font=new Font("Segoe UI",10,FontStyle.Bold)};
 
   internal SetupForm(){
