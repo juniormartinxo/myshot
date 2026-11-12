@@ -26,8 +26,8 @@ namespace MyShot {
    bar=new CaptureBar(this);
    bar.ApplyOpacity(Prefs.BarOpacity);
    updateItem=new ToolStripMenuItem("Atualizar",null,(s,e)=>CheckForUpdates());
-   moreMenu.Items.Add(updateItem);moreMenu.Items.Add("Ir para a bandeja",null,(s,e)=>bar.Hide());moreMenu.Items.Add(new ToolStripSeparator());moreMenu.Items.Add("Sair",null,(s,e)=>Exit());
-   var menu=new ContextMenuStrip();menu.Items.Add("Capturar região",null,(s,e)=>BeginCapture(false,false));menu.Items.Add("Capturar área livre",null,(s,e)=>BeginCapture(false,false,false,true));menu.Items.Add("Repetir última região",null,(s,e)=>BeginCapture(false,false,true));menu.Items.Add("Salvar desktop direto",null,(s,e)=>BeginCapture(true,true));menu.Items.Add("Abrir MyShot",null,(s,e)=>Restore());menu.Items.Add("Preferências",null,(s,e)=>{Restore();OpenSettings();});menu.Items.Add(new ToolStripSeparator());menu.Items.Add("Sair",null,(s,e)=>Exit());
+   ShotStripRenderer.StyleMenu(moreMenu);moreMenu.Items.Add(updateItem);moreMenu.Items.Add("Ir para a bandeja",null,(s,e)=>bar.Hide());moreMenu.Items.Add(new ToolStripSeparator());moreMenu.Items.Add("Sair",null,(s,e)=>Exit());
+   var menu=new ContextMenuStrip();ShotStripRenderer.StyleMenu(menu);menu.Items.Add("Capturar região",null,(s,e)=>BeginCapture(false,false));menu.Items.Add("Capturar área livre",null,(s,e)=>BeginCapture(false,false,false,true));menu.Items.Add("Repetir última região",null,(s,e)=>BeginCapture(false,false,true));menu.Items.Add("Salvar desktop direto",null,(s,e)=>BeginCapture(true,true));menu.Items.Add("Abrir MyShot",null,(s,e)=>Restore());menu.Items.Add("Preferências",null,(s,e)=>{Restore();OpenSettings();});menu.Items.Add(new ToolStripSeparator());menu.Items.Add("Sair",null,(s,e)=>Exit());
    tray=new NotifyIcon{Text="MyShot · Captura de tela",Icon=Theme.AppIcon,ContextMenuStrip=menu,Visible=true};tray.DoubleClick+=(s,e)=>Restore();
    RegisterKeys();
    if(warning!=null&&!Quiet)tray.ShowBalloonTip(4000,"MyShot",warning,ToolTipIcon.Warning);
