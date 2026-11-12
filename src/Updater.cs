@@ -30,7 +30,8 @@ namespace MyShot {
  internal static class Updates {
   const string LatestUrl="https://api.github.com/repos/"+AppInfo.Repository+"/releases/latest";
   const string ExeName="MyShot.exe", ChecksumName="MyShot.exe.sha256", ManifestName="MyShot.manifest", SignatureName="MyShot.manifest.sig";
-  static readonly string[] TrustedHosts={"api.github.com","github.com","objects.githubusercontent.com"};
+  // release-assets.githubusercontent.com é o host do GitHub para os anexos de release (o download redireciona para ele).
+  static readonly string[] TrustedHosts={"api.github.com","github.com","objects.githubusercontent.com","release-assets.githubusercontent.com"};
 
   internal static Version Parse(string tag){
    Version version;
