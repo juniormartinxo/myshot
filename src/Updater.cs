@@ -12,7 +12,7 @@ using System.Windows.Forms;
 namespace MyShot {
  // Versão instalada e repositório de releases. Ao publicar, a tag da release deve ser vX.Y.Z com este mesmo número.
  internal static class AppInfo {
-  internal const string Version="0.0.3";
+  internal const string Version="0.0.4";
   internal const string Repository="juniormartinxo/myshot";
  }
 
