@@ -35,6 +35,7 @@ SolidCompression=yes
 WizardStyle=modern
 OutputDir={#OutputDir}
 OutputBaseFilename={#OutputBaseFilename}
+SetupIconFile=..\assets\myshot.ico
 
 [Languages]
 Name: "brazilianportuguese"; MessagesFile: "compiler:Languages\BrazilianPortuguese.isl"
