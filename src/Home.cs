@@ -28,6 +28,7 @@ namespace MyShot {
    updateItem=new ToolStripMenuItem("Atualizar",null,(s,e)=>CheckForUpdates());
    ShotStripRenderer.StyleMenu(moreMenu);moreMenu.Items.Add(updateItem);moreMenu.Items.Add("Ir para a bandeja",null,(s,e)=>bar.Hide());moreMenu.Items.Add(new ToolStripSeparator());moreMenu.Items.Add("Sair",null,(s,e)=>Exit());
    var menu=new ContextMenuStrip();ShotStripRenderer.StyleMenu(menu);menu.Items.Add("Capturar região",null,(s,e)=>BeginCapture(false,false));menu.Items.Add("Capturar área livre",null,(s,e)=>BeginCapture(false,false,false,true));menu.Items.Add("Repetir última região",null,(s,e)=>BeginCapture(false,false,true));menu.Items.Add("Salvar desktop direto",null,(s,e)=>BeginCapture(true,true));menu.Items.Add("Abrir MyShot",null,(s,e)=>Restore());menu.Items.Add("Preferências",null,(s,e)=>{Restore();OpenSettings();});menu.Items.Add(new ToolStripSeparator());menu.Items.Add("Sair",null,(s,e)=>Exit());
+   ApplyMenuIcons(menu);ApplyMenuIcons(moreMenu);
    tray=new NotifyIcon{Text="MyShot · Captura de tela",Icon=Theme.AppIcon,ContextMenuStrip=menu,Visible=true};tray.DoubleClick+=(s,e)=>Restore();
    RegisterKeys();
    if(warning!=null&&!Quiet)tray.ShowBalloonTip(4000,"MyShot",warning,ToolTipIcon.Warning);
@@ -62,6 +63,14 @@ namespace MyShot {
   }
 
   protected override void WndProc(ref Message m){if(m.Msg==0x0312){int id=m.WParam.ToInt32();if(id==3){BeginCapture(false,false,false,true);return;}BeginCapture(id==2,id==2);return;}base.WndProc(ref m);}
+
+  // Ícone ao lado de cada opção dos menus, escolhido pelo texto da opção.
+  static void ApplyMenuIcons(ToolStripDropDown menu){
+   var icons=new Dictionary<string,string>{
+    {"Capturar região","capture"},{"Capturar área livre","Polygon"},{"Repetir última região","rotate-ccw"},{"Salvar desktop direto","save"},
+    {"Abrir MyShot","app-window"},{"Preferências","style"},{"Atualizar","refresh-cw"},{"Ir para a bandeja","minimize-2"},{"Sair","power"}};
+   foreach(ToolStripItem item in menu.Items){string name;if(icons.TryGetValue(item.Text,out name))item.Image=Theme.Icon(name,Theme.Ink);}
+  }
 
   void RecreateBar(){
    var old=bar;bool visible=old.Visible;

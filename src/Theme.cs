@@ -100,15 +100,18 @@ namespace MyShot {
   // Menus de contexto no estilo do app: cores do tema, destaque azul no hover, sem coluna de ícones.
   internal static void StyleMenu(ContextMenuStrip menu){
    menu.Renderer=new ShotStripRenderer(true);
-   menu.BackColor=Theme.Surface;menu.ForeColor=Theme.Ink;menu.ShowImageMargin=false;menu.Font=new Font("Segoe UI",10f);
+   menu.BackColor=Theme.Surface;menu.ForeColor=Theme.Ink;menu.ShowImageMargin=true;menu.Font=new Font("Segoe UI",10f);
   }
   bool Highlighted(ToolStripItem item){return accentHover&&(item.Selected||item.Pressed);}
   protected override void OnRenderItemImage(ToolStripItemImageRenderEventArgs e){
    string name;Color color;
-   if(Theme.TryGetIcon(e.Image,out name,out color)){Color shown=Highlighted(e.Item)?Theme.OnAccent:color;Theme.DrawIcon(e.Graphics,name,e.Item.Enabled?shown:Theme.Muted,e.ImageRectangle);return;}
+   // Ícones de menu usam a cor do tema atual na hora de desenhar, então acompanham a troca de tema.
+   if(Theme.TryGetIcon(e.Image,out name,out color)){Color shown=Highlighted(e.Item)?Theme.OnAccent:e.Item is ToolStripMenuItem?Theme.Ink:color;Theme.DrawIcon(e.Graphics,name,e.Item.Enabled?shown:Theme.Muted,e.ImageRectangle);return;}
    base.OnRenderItemImage(e);
   }
   protected override void OnRenderToolStripBackground(ToolStripRenderEventArgs e){e.Graphics.Clear(Theme.Surface);}
+  // Coluna de ícones dos menus com o fundo do tema, em vez do cinza padrão do Windows.
+  protected override void OnRenderImageMargin(ToolStripRenderEventArgs e){using(var b=new SolidBrush(Theme.Surface))e.Graphics.FillRectangle(b,e.AffectedBounds);}
   // Menus ganham uma borda fina do tema; a barra continua sem borda.
   protected override void OnRenderToolStripBorder(ToolStripRenderEventArgs e){if(e.ToolStrip is ToolStripDropDown){using(var p=new Pen(Theme.Border))e.Graphics.DrawRectangle(p,0,0,e.ToolStrip.Width-1,e.ToolStrip.Height-1);}}
   protected override void OnRenderSeparator(ToolStripSeparatorRenderEventArgs e){
