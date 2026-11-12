@@ -65,6 +65,7 @@ namespace MyShot {
   internal bool Primary;
   internal Color? Swatch;
   internal string Icon;
+  internal int IconSize=18;
   bool hover,pressed;
   internal ActionButton(){SetStyle(ControlStyles.UserPaint|ControlStyles.AllPaintingInWmPaint|ControlStyles.OptimizedDoubleBuffer,true);FlatStyle=FlatStyle.Flat;FlatAppearance.BorderSize=0;Cursor=Cursors.Hand;UseVisualStyleBackColor=false;}
   protected override void OnMouseEnter(EventArgs e){hover=true;Invalidate();base.OnMouseEnter(e);}
@@ -84,7 +85,7 @@ namespace MyShot {
    var text=ClientRectangle;TextFormatFlags flags=TextFormatFlags.HorizontalCenter|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis;
    if(Swatch.HasValue&&Text.Length==0){int side=(int)(20*scale),x=(Width-side)/2,y=(Height-side)/2;using(var b=new SolidBrush(Swatch.Value))g.FillEllipse(b,x,y,side,side);using(var p=new Pen(Theme.Border))g.DrawEllipse(p,x,y,side,side);}
    else if(Swatch.HasValue){int side=(int)(24*scale),left=(int)(16*scale);using(var b=new SolidBrush(Swatch.Value))g.FillEllipse(b,left,(Height-side)/2,side,side);using(var p=new Pen(Theme.Border))g.DrawEllipse(p,left,(Height-side)/2,side,side);text.X=(int)(52*scale);text.Width-=text.X+(int)(12*scale);flags=TextFormatFlags.Left|TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis;}
-   if(Icon!=null&&Text.Length==0){int side=(int)(18*scale);Theme.DrawIcon(g,Icon,fg,new Rectangle((Width-side)/2,(Height-side)/2,side,side));}
+   if(Icon!=null&&Text.Length==0){int side=(int)(IconSize*scale);Theme.DrawIcon(g,Icon,fg,new Rectangle((Width-side)/2,(Height-side)/2,side,side));}
    if(Text.Length>0)TextRenderer.DrawText(g,Text,Font,text,fg,flags);
    if(Focused){var r=Rectangle.Inflate(ClientRectangle,-(int)(5*scale),-(int)(5*scale));ControlPaint.DrawFocusRectangle(g,r,fg,bg);}
   }
