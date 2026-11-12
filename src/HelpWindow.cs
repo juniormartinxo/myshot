@@ -4,27 +4,62 @@ using System.Drawing;
 using System.Windows.Forms;
 
 namespace MyShot {
- // Janela de ajuda: nome, versão e contato. Abre pelo botão de ajuda da barra.
+ // Janela de ajuda: marca, nome, versão e contato. Abre pelo botão de ajuda da barra.
  internal sealed class HelpWindow : Form {
   internal HelpWindow() {
    UI.Style(this);
-   Text="MyShot · Ajuda";ClientSize=new Size(420,250);FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;MinimizeBox=false;ShowInTaskbar=false;StartPosition=FormStartPosition.CenterParent;
-   var title=Theme.Label("MyShot",18,true);title.Location=new Point(24,20);
-   var version=Theme.Label("Versão "+AppInfo.Version,10,false);version.Location=new Point(26,62);
-   var author=Theme.Label("Criado por Junior Martins",10,false);author.Location=new Point(26,96);
-   var email=Link("amjr.box@gmail.com","mailto:amjr.box@gmail.com");email.Location=new Point(26,126);
-   var repo=Link("github.com/juniormartinxo/myshot","https://github.com/juniormartinxo/myshot");repo.Location=new Point(26,156);
-   var close=UI.Button("Fechar",()=>Close(),true);close.Anchor=AnchorStyles.Bottom|AnchorStyles.Right;close.Location=new Point(ClientSize.Width-24-100,ClientSize.Height-24-40);
-   Controls.Add(title);Controls.Add(version);Controls.Add(author);Controls.Add(email);Controls.Add(repo);Controls.Add(close);
+   Text="MyShot · Ajuda";ClientSize=new Size(460,344);FormBorderStyle=FormBorderStyle.FixedDialog;MaximizeBox=false;MinimizeBox=false;ShowInTaskbar=false;StartPosition=FormStartPosition.CenterParent;
+
+   var logo=new PictureBox{Image=Logo(),SizeMode=PictureBoxSizeMode.Zoom,Size=new Size(96,96),Location=new Point(28,28),BackColor=Color.Transparent};
+   var title=Theme.Label("MyShot",22,true);title.Location=new Point(144,32);
+   var tagline=Theme.Label("Captura de tela para Windows",10,false);tagline.Location=new Point(146,76);
+   var version=Theme.Label("Versão "+AppInfo.Version,10,true);version.Location=new Point(146,100);
+   var rule=new Panel{BackColor=Theme.Border,Location=new Point(28,144),Size=new Size(ClientSize.Width-56,1)};
+   Controls.Add(logo);Controls.Add(title);Controls.Add(tagline);Controls.Add(version);Controls.Add(rule);
+
+   Field("Criado por",162,PlainText("Junior Martins"));
+   Field("E-mail",196,PlainText("amjr.box@gmail.com"));
+   AddRepository(230);
+
+   var close=UI.Button("Fechar",()=>Close(),true);close.Anchor=AnchorStyles.Bottom|AnchorStyles.Right;close.Location=new Point(ClientSize.Width-28-112,ClientSize.Height-28-40);
+   Controls.Add(close);
    AcceptButton=close;CancelButton=close;
   }
 
-  // Link clicável que abre no navegador ou no cliente de e-mail.
-  static LinkLabel Link(string text,string target) {
-   var link=new LinkLabel{Text=text,AutoSize=true,Font=new Font("Segoe UI",10f),LinkColor=Theme.Accent,ActiveLinkColor=Theme.AccentHover,VisitedLinkColor=Theme.Accent,BackColor=Color.Transparent,ForeColor=Theme.Ink};
-   link.Links.Add(0,text.Length,target);
-   link.LinkClicked+=(s,e)=>{try{Process.Start(new ProcessStartInfo((string)e.Link.LinkData){UseShellExecute=true});}catch(Exception ex){UI.Error(link,ex);}};
-   return link;
+  // Marca do app, embutida como recurso (PNG com transparência).
+  internal static Image Logo() {
+   using(var stream=typeof(HelpWindow).Assembly.GetManifestResourceStream("MyShot.myshot-logo.png")){
+    if(stream==null)return null;
+    return new Bitmap(Image.FromStream(stream));
+   }
+  }
+
+  // Linha de dados: rótulo discreto à esquerda e valor à direita.
+  void Field(string label,int y,Control value) {
+   var name=Theme.Label(label,9.5f,false);name.Location=new Point(28,y+3);
+   value.Location=new Point(146,y);
+   Controls.Add(name);Controls.Add(value);
+  }
+
+  static Label PlainText(string text) {
+   return new Label{Text=text,AutoSize=true,Font=new Font("Segoe UI",10f),ForeColor=Theme.Ink,BackColor=Color.Transparent};
+  }
+
+  // Repositório: texto simples e um botão de link ao lado, que abre no navegador.
+  void AddRepository(int y) {
+   const string url="https://github.com/juniormartinxo/myshot";
+   var name=Theme.Label("Repositório",9.5f,false);name.Location=new Point(28,y+3);
+   var text=PlainText("github.com/juniormartinxo/myshot");text.Location=new Point(146,y);
+   var size=TextRenderer.MeasureText(text.Text,text.Font);
+   var open=(ActionButton)UI.Button("",()=>Open(url),false);
+   open.Icon="link";open.IconSize=14;open.AccessibleName="Abrir o repositório no navegador";open.AutoSize=false;open.MinimumSize=new Size(34,34);open.Size=new Size(34,34);
+   open.Location=new Point(146+size.Width+8,y-7);
+   Controls.Add(name);Controls.Add(text);Controls.Add(open);
+  }
+
+  static void Open(string target) {
+   try{Process.Start(new ProcessStartInfo(target){UseShellExecute=true});}
+   catch(Exception ex){UI.Error(null,ex);}
   }
  }
 }

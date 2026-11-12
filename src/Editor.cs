@@ -27,16 +27,16 @@ namespace MyShot {
    home=owner;doc=new Document(source);UI.Style(this);Text="MyShot · Editor";ClientSize=new Size(1200,760);MinimumSize=new Size(940,560);
 
    Add("Nova captura",()=>home.BeginCapture(false,false)).Image=Theme.Icon("capture",Theme.Ink);
-   toolbar.Items.Add(new ToolStripSeparator());
+   toolbar.Items.Add(Gap());
    undo=Add("Desfazer",()=>History(false));undo.Image=Theme.Icon("undo",Theme.Ink);undo.ToolTipText="Desfazer (Ctrl+Z)";
    redo=Add("Refazer",()=>History(true));redo.Image=Theme.Icon("redo",Theme.Ink);redo.ToolTipText="Refazer (Ctrl+Y)";
-   toolbar.Items.Add(new ToolStripSeparator());
+   toolbar.Items.Add(Gap());
    moveButton=Add("Mover",SelectMove);moveButton.Tag="move";moveButton.Image=Theme.Icon("move",Theme.Ink);moveButton.ToolTipText="Selecionar e mover objetos (V)";
    for(int i=0;i<ToolNames.Length;i++){Tool t=(Tool)i;var b=Add(ToolNames[i],()=>SelectTool(t));b.Tag=t;b.Image=Theme.Icon(t.ToString(),Theme.Ink);b.ToolTipText=ToolNames[i];}
-   toolbar.Items.Add(new ToolStripSeparator());
+   toolbar.Items.Add(Gap());
    var copy=Add("Copiar",Copy);copy.Image=Theme.Icon("copy",Theme.Ink);copy.ToolTipText="Copiar imagem (Ctrl+C)";
    var save=Add("Salvar",Save);save.Tag="primary";save.Image=Theme.Icon("save",Theme.OnAccent);save.ToolTipText="Salvar imagem (Ctrl+S)";
-   toolbar.Items.Add(new ToolStripSeparator());
+   toolbar.Items.Add(Gap());
    var close=Add("Fechar",()=>Close());close.Image=Theme.Icon("close",Theme.Ink);close.ToolTipText="Fechar editor (Esc)";
 
    colorButton=(ActionButton)UI.Button("",()=>{using(var dialog=new ColorDialog{Color=Color.FromArgb(home.Prefs.Color),FullOpen=true})if(dialog.ShowDialog(this)==DialogResult.OK){home.Prefs.Color=dialog.Color.ToArgb();colorButton.Swatch=dialog.Color;colorButton.Invalidate();Store();}},false);
@@ -71,6 +71,8 @@ namespace MyShot {
    canvas.TopInset=optionsRow.Bottom+Dip(12);
    canvas.Invalidate();
   }
+  // Espaço do tamanho de um botão entre os grupos da barra (no lugar dos traços verticais), para caber um botão novo.
+  ToolStripItem Gap(){int pad=Dip(7),side=Theme.BarIconSize+2*pad;return new ToolStripLabel{AutoSize=false,Size=new Size(side,side),Margin=Padding.Empty};}
   ToolStripButton Add(string text,Action action){int pad=Dip(7),side=Theme.BarIconSize+2*pad;var b=new ToolStripButton(text){DisplayStyle=ToolStripItemDisplayStyle.Image,AutoSize=false,Size=new Size(side,side),Padding=new Padding(pad),ImageAlign=ContentAlignment.MiddleCenter,Margin=new Padding(1,0,1,0),AccessibleName=text,ToolTipText=text};b.Click+=(s,e)=>action();toolbar.Items.Add(b);return b;}
   // Rótulo e campo numérico lado a lado na linha de opções; o rótulo some junto com o campo.
   NumberField AddNumber(string text,int min,int max,int value,Action<int> set){
