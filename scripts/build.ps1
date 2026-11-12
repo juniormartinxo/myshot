@@ -23,7 +23,16 @@ if ($Test) {
     & "$OutputDirectory\MyShot.Tests.exe" "$root\research\private\validation"
     if ($LASTEXITCODE -ne 0) { throw 'Testes falharam.' }
 }
-# Instalador: um único .exe com o app embutido; copia para %LOCALAPPDATA%\Programs\MyShot e cria o atalho do menu Iniciar.
-& $compiler /nologo /target:winexe /platform:x64 /optimize+ /warnaserror+ "/out:$OutputDirectory\MyShot-Setup.exe" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll "/resource:$OutputDirectory\MyShot.exe,MyShot.exe" "/resource:$OutputDirectory\MyShot.exe.config,MyShot.exe.config" "$root\installer\Setup.cs"
-if ($LASTEXITCODE -ne 0) { throw 'Falha ao compilar o instalador.' }
+# Instalador (Inno Setup 6): um único MyShot-Setup.exe com o app embutido; instala por usuário, sem administrador.
+$iscc = @(
+    $env:ISCC,
+    (Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'),
+    (Join-Path $env:ProgramFiles 'Inno Setup 6\ISCC.exe'),
+    (Join-Path $env:LOCALAPPDATA 'Programs\Inno Setup 6\ISCC.exe')
+) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+if (!$iscc) { throw 'Instale o Inno Setup 6 (winget install JRSoftware.InnoSetup) ou defina a variável ISCC com o caminho do ISCC.exe.' }
+$appVersion = [regex]::Match((Get-Content -Raw (Join-Path $root 'src\Updater.cs')), 'Version="([^"]+)"').Groups[1].Value
+if (!$appVersion) { throw 'Versão não encontrada em src\Updater.cs.' }
+& $iscc "/DSourceDir=$OutputDirectory" "/DAppVersion=$appVersion" "/DOutputDir=$OutputDirectory" "/DOutputBaseFilename=MyShot-Setup" "$root\installer\MyShot.iss"
+if ($LASTEXITCODE -ne 0) { throw 'Falha ao gerar o instalador.' }
 Get-Item "$OutputDirectory\MyShot.exe" | Select-Object FullName,Length

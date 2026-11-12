@@ -10,7 +10,7 @@ Aplicativo de captura de tela para Windows x64: capturar uma região ou o deskto
 - **Renderização com System.Drawing (GDI+).** A imagem exportada e a prévia usam o mesmo renderizador, então o que aparece no editor é o que é salvo.
 - **Ícones SVG (Lucide, licença ISC) embutidos no executável.** São lidos por um leitor de SVG próprio e desenhados como vetor, então ficam nítidos em qualquer escala de DPI.
 - **Atualização pelo GitHub.** O atualizador consulta a última release pública, baixa o executável e confere o SHA-256 antes de substituir o app. Só age quando o usuário clica no botão.
-- **Instalador próprio.** Um único `.exe` com o app embutido, instalado em `%LOCALAPPDATA%` (sem administrador) com atalho no menu Iniciar.
+- **Instalador com Inno Setup 6.** Um único `.exe` com o app embutido, instalado em `%LOCALAPPDATA%` (sem administrador), com atalho no menu Iniciar e desinstalação em Aplicativos instalados. A geração do instalador exige o Inno Setup na máquina de build; o app em si continua sem dependências além do .NET Framework 4.8.
 
 ## Funcionalidades da versão atual
 
